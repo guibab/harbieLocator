@@ -1,0 +1,713 @@
+#include "harbieLocator.h"
+
+#include "shapesDefinition.h"
+
+//---------------------------------------------------------------------------
+//---------------------------------------------------------------------------
+// Node implementation with standard viewport draw
+//---------------------------------------------------------------------------
+//---------------------------------------------------------------------------
+MTypeId harbieLocator::id(0x001226F4);
+
+MObject harbieLocator::display;
+MObject harbieLocator::_rotX;
+MObject harbieLocator::_rotY;
+MObject harbieLocator::_rotZ;
+MObject harbieLocator::_rot;
+
+MString harbieLocator::drawDbClassification("drawdb/geometry/harbieLocator");
+MString harbieLocator::drawRegistrantId("harbieLocatorNodePlugin");
+
+harbieLocator::harbieLocator() : _update_attrs(true) {}
+harbieLocator::~harbieLocator() {}
+
+void harbieLocator::postConstructor() {
+    MObject self = thisMObject();
+    MFnDependencyNode fn_node(self);
+    fn_node.setName("harbieLocatorShape#");
+
+    _self = self;
+    _update_attrs = true;
+    MMatrix _transformMatrix;
+}
+/*
+MStatus harbieLocator::setDependentsDirty(const MPlug& dirty_plug, MPlugArray&
+affected_plugs) { MString plug_name_MString = dirty_plug.partialName();
+        std::string plug_name = plug_name_MString.asChar();
+        if( (plug_name == "lpx")|| (plug_name == "lpy")|| (plug_name == "lpz")
+){ _update_attrs = true;
+        }
+        if ((plug_name == "lsx") || (plug_name == "lsy") || (plug_name ==
+"lsz")) { _update_attrs = true;
+        }
+        if ((dirty_plug == _rot) || (dirty_plug == _rotX) || (dirty_plug ==
+_rotY) || (dirty_plug == _rotZ)) { _update_attrs = true;
+        }
+        return MS::kSuccess;
+}
+*/
+void harbieLocatorData::getPlugs(const MObject& node) {
+    MStatus status;
+    /*
+    MPlug local_position(node, harbieLocator::localPosition);
+    float tx = local_position.child(0).asFloat();
+    float ty = local_position.child(1).asFloat();
+    float tz = local_position.child(2).asFloat();
+
+    MPlug local_scale(node, harbieLocator::localScale);
+    float sx = local_scale.child(0).asFloat();
+    float sy = local_scale.child(1).asFloat();
+    float sz = local_scale.child(2).asFloat();
+
+    MPlug local_rotate(node, harbieLocator::_rot);
+    double rx = local_rotate.child(0).asDouble();
+    double ry = local_rotate.child(1).asDouble();
+    double rz = local_rotate.child(2).asDouble();
+    */
+
+    float tx = MPlug(node, harbieLocator::localPositionX).asFloat();
+    float ty = MPlug(node, harbieLocator::localPositionY).asFloat();
+    float tz = MPlug(node, harbieLocator::localPositionZ).asFloat();
+
+    float sx = MPlug(node, harbieLocator::localScaleX).asFloat();
+    float sy = MPlug(node, harbieLocator::localScaleY).asFloat();
+    float sz = MPlug(node, harbieLocator::localScaleZ).asFloat();
+
+    float rx = MPlug(node, harbieLocator::_rotX).asFloat();
+    float ry = MPlug(node, harbieLocator::_rotY).asFloat();
+    float rz = MPlug(node, harbieLocator::_rotZ).asFloat();
+    MEulerRotation eulerRot(rx, ry, rz);
+    this->matPreRotate = eulerRot.asMatrix();
+    this->matPreRotate.matrix[0][0] *= sx;
+    this->matPreRotate.matrix[0][1] *= sx;
+    this->matPreRotate.matrix[0][2] *= sx;
+    this->matPreRotate.matrix[1][0] *= sy;
+    this->matPreRotate.matrix[1][1] *= sy;
+    this->matPreRotate.matrix[1][2] *= sy;
+    this->matPreRotate.matrix[2][0] *= sz;
+    this->matPreRotate.matrix[2][1] *= sz;
+    this->matPreRotate.matrix[2][2] *= sz;
+    this->matPreRotate.matrix[3][0] = tx;
+    this->matPreRotate.matrix[3][1] = ty;
+    this->matPreRotate.matrix[3][2] = tz;
+}
+void harbieLocatorData::get(const MObject& node, MMatrix matPreRotate) {
+    MStatus status;
+
+    // MMatrix matPreRotate = node._transformMatrix;
+    MPlug displayType(node, harbieLocator::display);
+    int displayIndex = displayType.asInt();
+
+    this->fLineList.clear();
+    this->fTriangleList.clear();
+
+    this->fLineList.resize(1);
+    MPointArray& linesPoints = this->fLineList[0];
+
+    if (displayIndex == 0) {  // arrow
+        for (int i = 0; i < arrowCount; i++)
+            linesPoints.append(MPoint(listLinesArrow[i][0],
+                                      listLinesArrow[i][1],
+                                      listLinesArrow[i][2]) *
+                               matPreRotate);
+    }
+
+    else if (displayIndex == 1) {  // bone
+        for (int i = 0; i < boneCount; i++)
+            linesPoints.append(MPoint(listLinesBone[i][0], listLinesBone[i][1],
+                                      listLinesBone[i][2]) *
+                               matPreRotate);
+    }
+
+    else if (displayIndex == 2) {  // circle
+        for (int i = 0; i < circleCount; i++)
+            linesPoints.append(MPoint(listLinesCircle[i][0],
+                                      listLinesCircle[i][1],
+                                      listLinesCircle[i][2]) *
+                               matPreRotate);
+    }
+
+    else if (displayIndex == 3) {  // compass
+        for (int i = 0; i < compassCount; i++)
+            linesPoints.append(MPoint(listLinesCompass[i][0],
+                                      listLinesCompass[i][1],
+                                      listLinesCompass[i][2]) *
+                               matPreRotate);
+    }
+
+    else if (displayIndex == 4) {  // cross
+        for (int i = 0; i < crossCount; i++)
+            linesPoints.append(MPoint(listLinesCross[i][0],
+                                      listLinesCross[i][1],
+                                      listLinesCross[i][2]) *
+                               matPreRotate);
+    }
+
+    else if (displayIndex == 5) {  // crossArrow
+        for (int i = 0; i < crossArrowCount; i++)
+            linesPoints.append(MPoint(listLinesCrossarrow[i][0],
+                                      listLinesCrossarrow[i][1],
+                                      listLinesCrossarrow[i][2]) *
+                               matPreRotate);
+    }
+
+    else if (displayIndex == 6) {  // cube
+        for (int i = 0; i < cubeCount; i++)
+            linesPoints.append(MPoint(listLinesCube[i][0], listLinesCube[i][1],
+                                      listLinesCube[i][2]) *
+                               matPreRotate);
+    }
+
+    else if (displayIndex == 7) {  // cubeWithPeak
+        for (int i = 0; i < cubeWithPeakCount; i++)
+            linesPoints.append(MPoint(listLinesCubewithpeak[i][0],
+                                      listLinesCubewithpeak[i][1],
+                                      listLinesCubewithpeak[i][2]) *
+                               matPreRotate);
+    }
+
+    else if (displayIndex == 8) {  // cylinder
+        for (int i = 0; i < cylinderCount; i++)
+            linesPoints.append(MPoint(listLinesCylinder[i][0],
+                                      listLinesCylinder[i][1],
+                                      listLinesCylinder[i][2]) *
+                               matPreRotate);
+    }
+
+    else if (displayIndex == 9) {  // diamond
+        for (int i = 0; i < diamondCount; i++)
+            linesPoints.append(MPoint(listLinesDiamond[i][0],
+                                      listLinesDiamond[i][1],
+                                      listLinesDiamond[i][2]) *
+                               matPreRotate);
+    }
+
+    else if (displayIndex == 10) {  // flower
+        for (int i = 0; i < flowerCount; i++)
+            linesPoints.append(MPoint(listLinesFlower[i][0],
+                                      listLinesFlower[i][1],
+                                      listLinesFlower[i][2]) *
+                               matPreRotate);
+    }
+
+    else if (displayIndex == 11) {  // jaw
+        for (int i = 0; i < jawCount; i++)
+            linesPoints.append(MPoint(listLinesJaw[i][0], listLinesJaw[i][1],
+                                      listLinesJaw[i][2]) *
+                               matPreRotate);
+    }
+
+    else if (displayIndex == 12) {  // null
+        for (int i = 0; i < nullCount; i++)
+            linesPoints.append(MPoint(listLinesNull[i][0], listLinesNull[i][1],
+                                      listLinesNull[i][2]) *
+                               matPreRotate);
+    }
+
+    else if (displayIndex == 13) {  // pyramid
+        for (int i = 0; i < pyramidCount; i++)
+            linesPoints.append(MPoint(listLinesPyramid[i][0],
+                                      listLinesPyramid[i][1],
+                                      listLinesPyramid[i][2]) *
+                               matPreRotate);
+    }
+
+    else if (displayIndex == 14) {  // sphere
+        for (int i = 0; i < sphereCount; i++)
+            linesPoints.append(MPoint(listLinesSphere[i][0],
+                                      listLinesSphere[i][1],
+                                      listLinesSphere[i][2]) *
+                               matPreRotate);
+    }
+
+    else if (displayIndex == 15) {  // spine
+        for (int i = 0; i < spineCount; i++)
+            linesPoints.append(MPoint(listLinesSpine[i][0],
+                                      listLinesSpine[i][1],
+                                      listLinesSpine[i][2]) *
+                               matPreRotate);
+    }
+
+    else if (displayIndex == 16) {  // square
+        for (int i = 0; i < squareCount; i++)
+            linesPoints.append(MPoint(listLinesSquare[i][0],
+                                      listLinesSquare[i][1],
+                                      listLinesSquare[i][2]) *
+                               matPreRotate);
+    }
+
+    /*
+    if (displayIndex == 0) { // foot
+            this->fLineList.resize(2);
+            this->fTriangleList.resize(2);
+            for (int i = 0; i < soleCount; i++)
+            {
+                    this->fLineList[0].append(MPoint(sole[i][0], sole[i][1],
+    sole[i][2])*matPreRotate);
+
+            }
+            for (int i = 0; i < heelCount; i++)
+            {
+                    this->fLineList[1].append(MPoint(heel[i][0], heel[i][1],
+    heel[i][2])*matPreRotate);
+            }
+            for (int i = 1; i <= soleCount - 2; i++)
+            {
+                    this->fTriangleList[0].append(MPoint(sole[0][0], sole[0][1],
+    sole[0][2])*matPreRotate); this->fTriangleList[0].append(MPoint(sole[i][0],
+    sole[i][1], sole[i][2])*matPreRotate);
+                    this->fTriangleList[0].append(MPoint(sole[i + 1][0], sole[i
+    + 1][1], sole[i + 1][2])*matPreRotate);
+            }
+            for (int i = 1; i <= heelCount - 2; i++)
+            {
+                    this->fTriangleList[1].append(MPoint(heel[0][0], heel[0][1]
+    , heel[0][2] )*matPreRotate);
+                    this->fTriangleList[1].append(MPoint(heel[i][0], heel[i][1]
+    , heel[i][2] )*matPreRotate); this->fTriangleList[1].append(MPoint(heel[i +
+    1][0] , heel[i + 1][1] , heel[i + 1][2] )*matPreRotate);
+            }
+    }
+    else if (displayIndex == 1) { // cube
+            this->fLineList.resize(1);
+            MPointArray& linesPoints = this->fLineList[0];
+            for (int i = 0; i < linesCount; i++)
+            {
+                    linesPoints.append(MPoint(listLines[i][0], listLines[i][1],
+    listLines[i][2]) * matPreRotate);
+            }
+    }
+    else if (displayIndex == 2) { // rings
+            this->fLineList.resize(3);
+            for (int i = 0; i < sphereLinesCount; i++)
+            {
+                    this->fLineList[0].append(MPoint(sphereLines1[i][0],
+    sphereLines1[i][1], sphereLines1[i][2]) * matPreRotate);
+            }
+            for (int i = 0; i < sphereLinesCount; i++)
+            {
+                    this->fLineList[1].append(MPoint(sphereLines2[i][0],
+    sphereLines2[i][1], sphereLines2[i][2]) * matPreRotate);
+            }
+            for (int i = 0; i < sphereLinesCount; i++)
+            {
+                    this->fLineList[2].append(MPoint(sphereLines3[i][0],
+    sphereLines3[i][1], sphereLines3[i][2]) * matPreRotate);
+            }
+    }
+    */
+}
+
+void harbieLocatorData::getBB(const MObject& node, MMatrix matPreRotate) {
+    MStatus status;
+    // MMatrix matPreRotate = node._transformMatrix;
+    MPlug displayType(node, harbieLocator::display);
+    int displayIndex = displayType.asInt();
+    /*
+    if (displayIndex == 0) { // foot
+            this->theBoundingBox = MBoundingBox(MPoint(footBB[0][0],
+    footBB[0][1], footBB[0][2]), MPoint(footBB[1][0], footBB[1][1],
+    footBB[1][2]));
+    }
+    else if (displayIndex == 1) { // cube
+            this->theBoundingBox = MBoundingBox(MPoint(cubeBB[0][0],
+    cubeBB[0][1], cubeBB[0][2]), MPoint(cubeBB[1][0], cubeBB[1][1],
+    cubeBB[1][2]));
+    }
+    else if (displayIndex == 2) { // rings
+            this->theBoundingBox = MBoundingBox(MPoint(sphereBB[0][0],
+    sphereBB[0][1], sphereBB[0][2]), MPoint(sphereBB[1][0], sphereBB[1][1],
+    sphereBB[1][2]));
+    }
+    */
+    if (displayIndex == 0) {  // arrow
+        this->theBoundingBox =
+            MBoundingBox(MPoint(arrowBB[0][0], arrowBB[0][1], arrowBB[0][2]),
+                         MPoint(arrowBB[1][0], arrowBB[1][1], arrowBB[1][2]));
+    }
+
+    else if (displayIndex == 1) {  // bone
+        this->theBoundingBox =
+            MBoundingBox(MPoint(boneBB[0][0], boneBB[0][1], boneBB[0][2]),
+                         MPoint(boneBB[1][0], boneBB[1][1], boneBB[1][2]));
+    }
+
+    else if (displayIndex == 2) {  // circle
+        this->theBoundingBox = MBoundingBox(
+            MPoint(circleBB[0][0], circleBB[0][1], circleBB[0][2]),
+            MPoint(circleBB[1][0], circleBB[1][1], circleBB[1][2]));
+    }
+
+    else if (displayIndex == 3) {  // compass
+        this->theBoundingBox = MBoundingBox(
+            MPoint(compassBB[0][0], compassBB[0][1], compassBB[0][2]),
+            MPoint(compassBB[1][0], compassBB[1][1], compassBB[1][2]));
+    }
+
+    else if (displayIndex == 4) {  // cross
+        this->theBoundingBox =
+            MBoundingBox(MPoint(crossBB[0][0], crossBB[0][1], crossBB[0][2]),
+                         MPoint(crossBB[1][0], crossBB[1][1], crossBB[1][2]));
+    }
+
+    else if (displayIndex == 5) {  // crossArrow
+        this->theBoundingBox = MBoundingBox(
+            MPoint(crossArrowBB[0][0], crossArrowBB[0][1], crossArrowBB[0][2]),
+            MPoint(crossArrowBB[1][0], crossArrowBB[1][1], crossArrowBB[1][2]));
+    }
+
+    else if (displayIndex == 6) {  // cube
+        this->theBoundingBox =
+            MBoundingBox(MPoint(cubeBB[0][0], cubeBB[0][1], cubeBB[0][2]),
+                         MPoint(cubeBB[1][0], cubeBB[1][1], cubeBB[1][2]));
+    }
+
+    else if (displayIndex == 7) {  // cubeWithPeak
+        this->theBoundingBox =
+            MBoundingBox(MPoint(cubeWithPeakBB[0][0], cubeWithPeakBB[0][1],
+                                cubeWithPeakBB[0][2]),
+                         MPoint(cubeWithPeakBB[1][0], cubeWithPeakBB[1][1],
+                                cubeWithPeakBB[1][2]));
+    }
+
+    else if (displayIndex == 8) {  // cylinder
+        this->theBoundingBox = MBoundingBox(
+            MPoint(cylinderBB[0][0], cylinderBB[0][1], cylinderBB[0][2]),
+            MPoint(cylinderBB[1][0], cylinderBB[1][1], cylinderBB[1][2]));
+    }
+
+    else if (displayIndex == 9) {  // diamond
+        this->theBoundingBox = MBoundingBox(
+            MPoint(diamondBB[0][0], diamondBB[0][1], diamondBB[0][2]),
+            MPoint(diamondBB[1][0], diamondBB[1][1], diamondBB[1][2]));
+    }
+
+    else if (displayIndex == 10) {  // flower
+        this->theBoundingBox = MBoundingBox(
+            MPoint(flowerBB[0][0], flowerBB[0][1], flowerBB[0][2]),
+            MPoint(flowerBB[1][0], flowerBB[1][1], flowerBB[1][2]));
+    }
+
+    else if (displayIndex == 11) {  // jaw
+        this->theBoundingBox =
+            MBoundingBox(MPoint(jawBB[0][0], jawBB[0][1], jawBB[0][2]),
+                         MPoint(jawBB[1][0], jawBB[1][1], jawBB[1][2]));
+    }
+
+    else if (displayIndex == 12) {  // null
+        this->theBoundingBox =
+            MBoundingBox(MPoint(nullBB[0][0], nullBB[0][1], nullBB[0][2]),
+                         MPoint(nullBB[1][0], nullBB[1][1], nullBB[1][2]));
+    }
+
+    else if (displayIndex == 13) {  // pyramid
+        this->theBoundingBox = MBoundingBox(
+            MPoint(pyramidBB[0][0], pyramidBB[0][1], pyramidBB[0][2]),
+            MPoint(pyramidBB[1][0], pyramidBB[1][1], pyramidBB[1][2]));
+    }
+
+    else if (displayIndex == 14) {  // sphere
+        this->theBoundingBox = MBoundingBox(
+            MPoint(sphereBB[0][0], sphereBB[0][1], sphereBB[0][2]),
+            MPoint(sphereBB[1][0], sphereBB[1][1], sphereBB[1][2]));
+    }
+
+    else if (displayIndex == 15) {  // spine
+        this->theBoundingBox =
+            MBoundingBox(MPoint(spineBB[0][0], spineBB[0][1], spineBB[0][2]),
+                         MPoint(spineBB[1][0], spineBB[1][1], spineBB[1][2]));
+    }
+
+    else if (displayIndex == 16) {  // square
+        this->theBoundingBox = MBoundingBox(
+            MPoint(squareBB[0][0], squareBB[0][1], squareBB[0][2]),
+            MPoint(squareBB[1][0], squareBB[1][1], squareBB[1][2]));
+    }
+
+    this->theBoundingBox.transformUsing(matPreRotate);
+}
+MStatus harbieLocator::compute(const MPlug& plug, MDataBlock& /*data*/) {
+    return MS::kSuccess;
+}
+
+// called by legacy default viewport
+void harbieLocator::draw(M3dView& view, const MDagPath& path,
+                         M3dView::DisplayStyle style,
+                         M3dView::DisplayStatus status) {
+    harbieLocatorData data;
+    data.getPlugs(_self);
+    data.get(_self, data.matPreRotate);
+    _transformMatrix = _transformMatrix;
+    // data.get(_self, _transformMatrix);
+
+    view.beginGL();
+    if ((style == M3dView::kFlatShaded) || (style == M3dView::kGouraudShaded)) {
+        // Push the color settings
+        //
+        glPushAttrib(GL_CURRENT_BIT);
+
+        if (status == M3dView::kActive) {
+            view.setDrawColor(13, M3dView::kActiveColors);
+        } else {
+            view.setDrawColor(13, M3dView::kDormantColors);
+        }
+        /*
+        MColor fColor = MHWRender::MGeometryUtilities::wireframeColor(path);
+        glColor3f(GLfloat(fColor.r), GLfloat(fColor.g), GLfloat(fColor.b));
+        //selected color
+        */
+
+        int nbTriangles = data.fTriangleList.size();
+        MPointArray listOfTrianglesPoints;
+        for (int i = 0; i < nbTriangles; ++i) {
+            glBegin(GL_TRIANGLE_FAN);
+            listOfTrianglesPoints = data.fTriangleList[i];
+            for (int j = 0; j < listOfTrianglesPoints.length(); ++j) {
+                glVertex3f(listOfTrianglesPoints[j][0],
+                           listOfTrianglesPoints[j][1],
+                           listOfTrianglesPoints[j][2]);
+            }
+            glEnd();
+        }
+        glPopAttrib();
+    }
+    // Draw the outline of the foot
+    //
+    MPointArray listOfLinesPoints;
+    int nbLines = data.fLineList.size();
+    for (int i = 0; i < nbLines; ++i) {
+        glBegin(GL_LINE_STRIP);
+        listOfLinesPoints = data.fLineList[i];
+
+        int last = listOfLinesPoints.length();
+        for (int j = 0; j < last; ++j) {
+            glVertex3f(listOfLinesPoints[j][0], listOfLinesPoints[j][1],
+                       listOfLinesPoints[j][2]);
+        }
+        glEnd();
+    }
+    view.endGL();
+
+    // Draw the name of the harbieLocator
+    /*
+    view.setDrawColor( MColor( 0.1f, 0.8f, 0.8f, 1.0f ) );
+    view.drawText( MString("harbieLocator"), MPoint( 0.0, 0.0, 0.0 ),
+    M3dView::kCenter );
+    */
+}
+
+bool harbieLocator::isBounded() const { return true; }
+
+MBoundingBox harbieLocator::boundingBox() const {
+    // Get the size
+    //
+    MObject thisNode = thisMObject();
+    harbieLocatorData data;
+
+    data.getPlugs(_self);
+    data.getBB(_self, data.matPreRotate);
+    // data.get(thisMObject(), _transformMatrix);
+    return data.theBoundingBox;
+}
+
+void* harbieLocator::creator() { return new harbieLocator(); }
+
+//---------------------------------------------------------------------------
+//---------------------------------------------------------------------------
+// Viewport 2.0 override implementation
+//---------------------------------------------------------------------------
+//---------------------------------------------------------------------------
+
+// By setting isAlwaysDirty to false in MPxDrawOverride constructor, the
+// draw override will be updated (via prepareForDraw()) only when the node
+// is marked dirty via DG evaluation or dirty propagation. Additional
+// callback is also added to explicitly mark the node as being dirty (via
+// MRenderer::setGeometryDrawDirty()) for certain circumstances. Note that
+// the draw callback in MPxDrawOverride constructor is set to NULL in order
+// to achieve better performance.
+harbieLocatorDrawOverride::harbieLocatorDrawOverride(const MObject& obj)
+    : MHWRender::MPxDrawOverride(obj, NULL, false) {
+    fModelEditorChangedCbId = MEventMessage::addEventCallback(
+        "modelEditorChanged", OnModelEditorChanged, this);
+
+    MStatus status;
+    MFnDependencyNode node(obj, &status);
+    fharbieLocator =
+        status ? dynamic_cast<harbieLocator*>(node.userNode()) : NULL;
+}
+
+harbieLocatorDrawOverride::~harbieLocatorDrawOverride() {
+    fharbieLocator = NULL;
+
+    if (fModelEditorChangedCbId != 0) {
+        MMessage::removeCallback(fModelEditorChangedCbId);
+        fModelEditorChangedCbId = 0;
+    }
+}
+
+void harbieLocatorDrawOverride::OnModelEditorChanged(void* clientData) {
+    // Mark the node as being dirty so that it can update on display appearance
+    // switch among wireframe and shaded.
+    harbieLocatorDrawOverride* ovr =
+        static_cast<harbieLocatorDrawOverride*>(clientData);
+    if (ovr && ovr->fharbieLocator) {
+        MHWRender::MRenderer::setGeometryDrawDirty(
+            ovr->fharbieLocator->thisMObject());
+    }
+}
+
+MHWRender::DrawAPI harbieLocatorDrawOverride::supportedDrawAPIs() const {
+    // this plugin supports both GL and DX
+    return (MHWRender::kOpenGL | MHWRender::kDirectX11 |
+            MHWRender::kOpenGLCoreProfile);
+}
+
+bool harbieLocatorDrawOverride::isBounded(
+    const MDagPath& /*objPath*/, const MDagPath& /*cameraPath*/) const {
+    return true;
+}
+
+MBoundingBox harbieLocatorDrawOverride::boundingBox(
+    const MDagPath& objPath, const MDagPath& cameraPath) const {
+    harbieLocatorData data;
+    MObject node = objPath.node();
+    data.getPlugs(node);
+    data.getBB(node, data.matPreRotate);
+    return data.theBoundingBox;
+    // return MBoundingBox (MPoint(-.5, -.5, -.5), MPoint(.5, .5, .5));
+}
+
+// Called by Maya each time the object needs to be drawn.
+MUserData* harbieLocatorDrawOverride::prepareForDraw(
+    const MDagPath& objPath, const MDagPath& cameraPath,
+    const MHWRender::MFrameContext& frameContext, MUserData* oldData) {
+    // Any data needed from the Maya dependency graph must be retrieved and
+    // cached in this stage. There is one cache data for each drawable instance,
+    // if it is not desirable to allow Maya to handle data caching, simply
+    // return null in this method and ignore user data parameter in draw
+    // callback method. e.g. in this sample, we compute and cache the data for
+    // usage later when we create the MUIDrawManager to draw harbieLocator in
+    // method addUIDrawables().
+    MStatus stat;
+    harbieLocatorData* data = dynamic_cast<harbieLocatorData*>(oldData);
+    MObject node = objPath.node(&stat);
+
+    if (!data) {
+        data = new harbieLocatorData;
+    }
+    data->getPlugs(node);
+    data->get(node, data->matPreRotate);
+
+    // get correct color based on the state of object, e.g. active or dormant
+    data->fColor = MHWRender::MGeometryUtilities::wireframeColor(objPath);
+    return data;
+}
+
+// addUIDrawables() provides access to the MUIDrawManager, which can be used
+// to queue up operations for drawing simple UI elements such as lines, circles
+// and text. To enable addUIDrawables(), override hasUIDrawables() and make it
+// return true.
+void harbieLocatorDrawOverride::addUIDrawables(
+    const MDagPath& objPath, MHWRender::MUIDrawManager& drawManager,
+    const MHWRender::MFrameContext& frameContext, const MUserData* data) {
+    // Get data cached by prepareForDraw() for each drawable instance, then
+    // MUIDrawManager can draw simple UI by these data.
+    harbieLocatorData* pLocatorData = (harbieLocatorData*)data;
+    if (!pLocatorData) {
+        return;
+    }
+    drawManager.beginDrawable();
+
+    // Draw the foot print solid/wireframe
+    drawManager.setColor(pLocatorData->fColor);
+    drawManager.setDepthPriority(5);
+
+    if (frameContext.getDisplayStyle() &
+        MHWRender::MFrameContext::kGouraudShaded) {
+        int nbTriangles = pLocatorData->fTriangleList.size();
+        for (int i = 0; i < nbTriangles; ++i) {
+            drawManager.mesh(MHWRender::MUIDrawManager::kTriangles,
+                             pLocatorData->fTriangleList[i]);
+        }
+    }
+    int nbLines = pLocatorData->fLineList.size();
+    for (int i = 0; i < nbLines; ++i) {
+        drawManager.mesh(MHWRender::MUIDrawManager::kLineStrip,
+                         pLocatorData->fLineList[i]);
+    }
+
+    // Draw a text "Foot"
+    /*
+    MPoint pos( 0.0, 0.0, 0.0 ); // Position of the text
+    MColor textColor( 0.1f, 0.8f, 0.8f, 1.0f ); // Text color
+
+    drawManager.setColor( textColor );
+    drawManager.setFontSize(12.2);// MHWRender::MUIDrawManager::kSmallFontSize
+    ); drawManager.text( pos,  MString("harbieLocator"),
+    MHWRender::MUIDrawManager::kCenter );
+    */
+
+    drawManager.endDrawable();
+}
+
+//---------------------------------------------------------------------------
+//---------------------------------------------------------------------------
+// Plugin initialize
+//---------------------------------------------------------------------------
+//---------------------------------------------------------------------------
+
+MStatus harbieLocator::initialize() {
+    MFnUnitAttribute unitFn;
+    MFnNumericAttribute nAttr;
+    MFnEnumAttribute enumAttr;
+
+    MStatus stat;
+
+    _rotX = unitFn.create("localRotateX", "lrx", MFnUnitAttribute::kAngle, 0.0);
+    _rotY = unitFn.create("localRotateY", "lry", MFnUnitAttribute::kAngle, 0.0);
+    _rotZ = unitFn.create("localRotateZ", "lrz", MFnUnitAttribute::kAngle, 0.0);
+    _rot = nAttr.create("localRotate", "lr", _rotX, _rotY, _rotZ);
+
+    unitFn.setStorable(true);
+    nAttr.setDefault(0., 0., 0.);
+    nAttr.setStorable(true);
+    nAttr.setKeyable(true);
+    nAttr.setWritable(true);
+    nAttr.setReadable(true);
+    CHECK_MSTATUS(addAttribute(_rot));
+
+    // the type of deformation
+    display = enumAttr.create("display", "display", 0);
+    /*
+    CHECK_MSTATUS(enumAttr.addField("foot", 0));
+    CHECK_MSTATUS(enumAttr.addField("box", 1));
+    CHECK_MSTATUS(enumAttr.addField("rings", 2));
+    */
+    CHECK_MSTATUS(enumAttr.addField("Arrow", 0));
+    CHECK_MSTATUS(enumAttr.addField("Bone", 1));
+    CHECK_MSTATUS(enumAttr.addField("Circle", 2));
+    CHECK_MSTATUS(enumAttr.addField("Compass", 3));
+    CHECK_MSTATUS(enumAttr.addField("Cross", 4));
+    CHECK_MSTATUS(enumAttr.addField("CrossArrow", 5));
+    CHECK_MSTATUS(enumAttr.addField("Cube", 6));
+    CHECK_MSTATUS(enumAttr.addField("CubeWithPeak", 7));
+    CHECK_MSTATUS(enumAttr.addField("Cylinder", 8));
+    CHECK_MSTATUS(enumAttr.addField("Diamond", 9));
+    CHECK_MSTATUS(enumAttr.addField("Flower", 10));
+    CHECK_MSTATUS(enumAttr.addField("Jaw", 11));
+    CHECK_MSTATUS(enumAttr.addField("Null", 12));
+    CHECK_MSTATUS(enumAttr.addField("Pyramid", 13));
+    CHECK_MSTATUS(enumAttr.addField("Sphere", 14));
+    CHECK_MSTATUS(enumAttr.addField("Spine", 15));
+    CHECK_MSTATUS(enumAttr.addField("Square", 16));
+
+    CHECK_MSTATUS(enumAttr.setStorable(true));
+    CHECK_MSTATUS(enumAttr.setKeyable(true));
+    CHECK_MSTATUS(enumAttr.setReadable(true));
+    CHECK_MSTATUS(enumAttr.setWritable(true));
+    CHECK_MSTATUS(enumAttr.setCached(false));
+
+    CHECK_MSTATUS(addAttribute(display));
+
+    return MS::kSuccess;
+}
