@@ -1,6 +1,6 @@
 #include "harbieCurve.h"
 
-#include "shapesDefinition.h"
+#include "shapesDefinitionCurve.h"
 
 //---------------------------------------------------------------------------
 //---------------------------------------------------------------------------
@@ -27,7 +27,7 @@ MObject harbieCurve::_scale;
 
 MObject harbieCurve::outputCurve;
 
-MTypeId harbieCurve::id(0x001226F6);
+MTypeId harbieCurve::id(0x001226F5);
 
 harbieCurve::harbieCurve() {}
 harbieCurve::~harbieCurve() {}
@@ -106,6 +106,8 @@ void harbieCurveData::get(const MObject& node, MMatrix matPreRotate) {
                                       listLinesArrow[i][1],
                                       listLinesArrow[i][2]) *
                                matPreRotate);
+        this->isOpen = arrowisOpen;
+        this->degree = arrowDegree;
     }
 
     else if (displayIndex == 1) {  // bone
@@ -113,6 +115,8 @@ void harbieCurveData::get(const MObject& node, MMatrix matPreRotate) {
             linesPoints.append(MPoint(listLinesBone[i][0], listLinesBone[i][1],
                                       listLinesBone[i][2]) *
                                matPreRotate);
+        this->isOpen = boneisOpen;
+        this->degree = boneDegree;
     }
 
     else if (displayIndex == 2) {  // circle
@@ -121,6 +125,8 @@ void harbieCurveData::get(const MObject& node, MMatrix matPreRotate) {
                                       listLinesCircle[i][1],
                                       listLinesCircle[i][2]) *
                                matPreRotate);
+        this->isOpen = circleisOpen;
+        this->degree = circleDegree;
     }
 
     else if (displayIndex == 3) {  // compass
@@ -129,6 +135,8 @@ void harbieCurveData::get(const MObject& node, MMatrix matPreRotate) {
                                       listLinesCompass[i][1],
                                       listLinesCompass[i][2]) *
                                matPreRotate);
+        this->isOpen = compassisOpen;
+        this->degree = compassDegree;
     }
 
     else if (displayIndex == 4) {  // cross
@@ -137,6 +145,8 @@ void harbieCurveData::get(const MObject& node, MMatrix matPreRotate) {
                                       listLinesCross[i][1],
                                       listLinesCross[i][2]) *
                                matPreRotate);
+        this->isOpen = crossisOpen;
+        this->degree = crossDegree;
     }
 
     else if (displayIndex == 5) {  // crossArrow
@@ -145,6 +155,8 @@ void harbieCurveData::get(const MObject& node, MMatrix matPreRotate) {
                                       listLinesCrossarrow[i][1],
                                       listLinesCrossarrow[i][2]) *
                                matPreRotate);
+        this->isOpen = crossArrowisOpen;
+        this->degree = crossArrowDegree;
     }
 
     else if (displayIndex == 6) {  // cube
@@ -152,6 +164,8 @@ void harbieCurveData::get(const MObject& node, MMatrix matPreRotate) {
             linesPoints.append(MPoint(listLinesCube[i][0], listLinesCube[i][1],
                                       listLinesCube[i][2]) *
                                matPreRotate);
+        this->isOpen = cubeisOpen;
+        this->degree = cubeDegree;
     }
 
     else if (displayIndex == 7) {  // cubeWithPeak
@@ -160,6 +174,8 @@ void harbieCurveData::get(const MObject& node, MMatrix matPreRotate) {
                                       listLinesCubewithpeak[i][1],
                                       listLinesCubewithpeak[i][2]) *
                                matPreRotate);
+        this->isOpen = cubeWithPeakisOpen;
+        this->degree = cubeWithPeakDegree;
     }
 
     else if (displayIndex == 8) {  // cylinder
@@ -168,6 +184,8 @@ void harbieCurveData::get(const MObject& node, MMatrix matPreRotate) {
                                       listLinesCylinder[i][1],
                                       listLinesCylinder[i][2]) *
                                matPreRotate);
+        this->isOpen = cylinderisOpen;
+        this->degree = cylinderDegree;
     }
 
     else if (displayIndex == 9) {  // diamond
@@ -176,6 +194,8 @@ void harbieCurveData::get(const MObject& node, MMatrix matPreRotate) {
                                       listLinesDiamond[i][1],
                                       listLinesDiamond[i][2]) *
                                matPreRotate);
+        this->isOpen = diamondisOpen;
+        this->degree = diamondDegree;
     }
 
     else if (displayIndex == 10) {  // flower
@@ -184,6 +204,8 @@ void harbieCurveData::get(const MObject& node, MMatrix matPreRotate) {
                                       listLinesFlower[i][1],
                                       listLinesFlower[i][2]) *
                                matPreRotate);
+        this->isOpen = flowerisOpen;
+        this->degree = flowerDegree;
     }
 
     else if (displayIndex == 11) {  // jaw
@@ -191,6 +213,8 @@ void harbieCurveData::get(const MObject& node, MMatrix matPreRotate) {
             linesPoints.append(MPoint(listLinesJaw[i][0], listLinesJaw[i][1],
                                       listLinesJaw[i][2]) *
                                matPreRotate);
+        this->isOpen = jawisOpen;
+        this->degree = jawDegree;
     }
 
     else if (displayIndex == 12) {  // null
@@ -198,6 +222,8 @@ void harbieCurveData::get(const MObject& node, MMatrix matPreRotate) {
             linesPoints.append(MPoint(listLinesNull[i][0], listLinesNull[i][1],
                                       listLinesNull[i][2]) *
                                matPreRotate);
+        this->isOpen = nullisOpen;
+        this->degree = nullDegree;
     }
 
     else if (displayIndex == 13) {  // pyramid
@@ -206,6 +232,8 @@ void harbieCurveData::get(const MObject& node, MMatrix matPreRotate) {
                                       listLinesPyramid[i][1],
                                       listLinesPyramid[i][2]) *
                                matPreRotate);
+        this->isOpen = pyramidisOpen;
+        this->degree = pyramidDegree;
     }
 
     else if (displayIndex == 14) {  // sphere
@@ -214,6 +242,8 @@ void harbieCurveData::get(const MObject& node, MMatrix matPreRotate) {
                                       listLinesSphere[i][1],
                                       listLinesSphere[i][2]) *
                                matPreRotate);
+        this->isOpen = sphereisOpen;
+        this->degree = sphereDegree;
     }
 
     else if (displayIndex == 15) {  // spine
@@ -222,6 +252,8 @@ void harbieCurveData::get(const MObject& node, MMatrix matPreRotate) {
                                       listLinesSpine[i][1],
                                       listLinesSpine[i][2]) *
                                matPreRotate);
+        this->isOpen = spineisOpen;
+        this->degree = spineDegree;
     }
 
     else if (displayIndex == 16) {  // square
@@ -230,6 +262,8 @@ void harbieCurveData::get(const MObject& node, MMatrix matPreRotate) {
                                       listLinesSquare[i][1],
                                       listLinesSquare[i][2]) *
                                matPreRotate);
+        this->isOpen = squareisOpen;
+        this->degree = squareDegree;
     }
 }
 
@@ -277,26 +311,49 @@ MStatus harbieCurve::compute(const MPlug& plug, MDataBlock& data) {
     MFnNurbsCurve curveFn;
     MDoubleArray knots;
 
-    int degree_value = 1;
-
+    int degree_value = curveData.degree;
     int cvsLength = listOfLinesPoints.length();
-    if (degree_value == 3) {
-        knots.append((double)0.);
-        knots.append((double)0.);
-        for (int i = 0; (i < (cvsLength - 2)); i++) {
-            knots.append((double)i);
+    if (!curveData.isOpen) {
+        listOfLinesPoints.append(listOfLinesPoints[0]);
+        if (degree_value == 3) {
+            listOfLinesPoints.append(listOfLinesPoints[1]);
+            listOfLinesPoints.append(listOfLinesPoints[2]);
+            knots.append(-2);
+            knots.append(-1.);
+            for (int i = 0; (i < cvsLength + 3); i++) {
+                knots.append((double)i);
+            }
+        } else {
+            knots.append(-1.);
+            for (int i = 0; (i < cvsLength); i++) {
+                knots.append((double)i);
+            }
         }
-        double lastVal = listOfLinesPoints.length() - 3.;
-        knots.append(lastVal);
-        knots.append(lastVal);
+
     } else {
-        for (int i = 0; (i < cvsLength); i++) {
-            knots.append((double)i);
+        // int cvsLength = listOfLinesPoints.length();
+        if (degree_value == 3) {
+            knots.append((double)0.);
+            knots.append((double)0.);
+            for (int i = 0; (i < (cvsLength - 2)); i++) {
+                knots.append((double)i);
+            }
+            double lastVal = listOfLinesPoints.length() - 3.;
+            knots.append(lastVal);
+            knots.append(lastVal);
+        } else {
+            for (int i = 0; (i < cvsLength); i++) {
+                knots.append((double)i);
+            }
         }
     }
-
-    curveFn.create(listOfLinesPoints, knots, degree_value, MFnNurbsCurve::kOpen,
-                   false, false, createdCurve, &stat);
+    if (curveData.isOpen)
+        curveFn.create(listOfLinesPoints, knots, degree_value,
+                       MFnNurbsCurve::kOpen, false, false, createdCurve, &stat);
+    else
+        curveFn.create(listOfLinesPoints, knots, degree_value,
+                       MFnNurbsCurve::kPeriodic, false, false, createdCurve,
+                       &stat);
 
     outputCurve_DataHandle.setMObject(createdCurve);
     outputCurve_DataHandle.asNurbsCurve();

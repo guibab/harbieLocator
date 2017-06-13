@@ -14,26 +14,34 @@ print toPrint
 #------------------------------------------------------------------------------------------------------------------------
 #------------------------------------------------------------------------------------------------------------------------
 from maya import cmds
+cmds.loadPlugin ("harbieLocator.mll")
 cmds.loadPlugin (r"C:\Users\guillaume\Documents\DEV\Maya\cpp\harbieLocator\BUILD20165\Debug\harbieLocator.mll")
 cmds.createNode ("harbieLocator")
 cmds.createNode ("makeHarbieCurve")
 
 #------------------------------------------------------------------------------------------------------------------------
 def createNodeCurve () :
-    tr,=cmds.circle (ch=False)
-    shp,=cmds.listRelatives (tr, s=1)
+    shp=cmds.createNode ("nurbsCurve")
+    tr,=cmds.listRelatives  (shp, p=True)
     mhc= cmds.createNode ("makeHarbieCurve")
     cmds.connectAttr (mhc+".outputCurve", shp+".create")
-    return tr
+    cmds.select (tr)
+    cmds.select (mhc, addFirst=True)
+    return tr,shp, mhc
+
+
 nbLoc = 10
 for x in range (nbLoc) : 
     for y in range (nbLoc) : 
         for z in range (nbLoc) : 
-            prt=createNodeCurve ()
+            prt,=createNodeCurve ()
             cmds.xform (prt, t= [x,y,z])
 
 #------------------------------------------------------------------------------------------------------------------------
 #------------------------------------------------------------------------------------------------------------------------
+
+
+
 
 cmds.loadPlugin ("harbieLocator")
 
@@ -85,6 +93,22 @@ for ind, icon in enumerate (icons) :
 uncapitalize = lambda s: s[0].lower() + s[1:] if s else ''
 
 
+def printingFunctionCurve ():
+  a='''if (displayIndex == {2}) {{ // {0}
+  for (int i = 0; i < {0}Count; i++)
+    linesPoints.append(MPoint(listLines{1}[i][0], listLines{1}[i][1], listLines{1}[i][2]) * matPreRotate);
+    this->isOpen = {0}isOpen;
+    this->degree = {0}Degree;
+  }}
+  '''
+  sel = cmds.ls (sl=True)
+  toPrint = "\n\n"
+  for ind, icon in enumerate(sel) :
+      if ind !=0 : toPrint+="else "
+      toPrint += a.format (uncapitalize(icon), icon.capitalize(), ind)
+      toPrint +="\n"
+  cmds.warning(toPrint) 
+
 def printingFunction ():
   a='''if (displayIndex == {2}) {{ // {0}
   for (int i = 0; i < {0}Count; i++)
@@ -132,6 +156,32 @@ enumAttrFunction ()
 #------------------------------------------------------------------------------------------------------------------------
 
 from maya import cmds
+def definitionCurve2 () :
+  sel = cmds.ls (sl=True)
+  toPrint=""
+  for curveName in sel:
+    varName = "listLines"+curveName.capitalize()
+    isOpen = str(cmds.getAttr (curveName+".form")== 0 ).lower()
+    degree = cmds.getAttr (curveName+".degree")
+
+    print      "\n\n"
+    pts=  cmds.xform (curveName+".cv[*]", q=True, ws=True, t=True)
+    origPts = zip(pts[0::3], pts[1::3], pts[2::3])
+    myNewArrayofLines = []
+
+    for thePt in origPts :
+       arr = "{0:.3f}f, {1:.3f}f,{2:.3f}f".format (*thePt )
+       newLine = "{{ {0} }} ".format (arr)
+       myNewArrayofLines .append (newLine )
+
+    lowIcon = uncapitalize(curveName)
+    toPrint += "\n\nstatic float {1}[{2}][3] = {{ {0} }}; ".format(",\n".join(myNewArrayofLines     ), varName,len(origPts) )        
+    toPrint += "\nstatic int {0}Count = {1};".format (lowIcon, len(origPts))
+    toPrint += "\nstatic int {0}Degree = {1};".format (lowIcon, degree)
+    toPrint += "\nstatic bool {0}isOpen = {1};".format (lowIcon, isOpen)
+
+  cmds.warning(toPrint) 
+
 
 def definitionCurve () :
   sel = cmds.ls (sl=True)
