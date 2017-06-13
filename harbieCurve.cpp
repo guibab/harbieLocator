@@ -10,6 +10,7 @@
 
 MObject harbieCurve::display;
 
+MObject harbieCurve::_size;
 MObject harbieCurve::_rotX;
 MObject harbieCurve::_rotY;
 MObject harbieCurve::_rotZ;
@@ -62,6 +63,7 @@ _rotY) || (dirty_plug == _rotZ)) { _update_attrs = true;
 
 void harbieCurveData::getPlugs(const MObject& node) {
     MStatus status;
+    double size = MPlug(node, harbieCurve::_size).asDouble();
     double tx = MPlug(node, harbieCurve::_transX).asDouble();
     double ty = MPlug(node, harbieCurve::_transY).asDouble();
     double tz = MPlug(node, harbieCurve::_transZ).asDouble();
@@ -76,15 +78,15 @@ void harbieCurveData::getPlugs(const MObject& node) {
     MEulerRotation eulerRot(rx, ry, rz);
 
     this->matPreRotate = eulerRot.asMatrix();
-    this->matPreRotate.matrix[0][0] *= sx;
-    this->matPreRotate.matrix[0][1] *= sx;
-    this->matPreRotate.matrix[0][2] *= sx;
-    this->matPreRotate.matrix[1][0] *= sy;
-    this->matPreRotate.matrix[1][1] *= sy;
-    this->matPreRotate.matrix[1][2] *= sy;
-    this->matPreRotate.matrix[2][0] *= sz;
-    this->matPreRotate.matrix[2][1] *= sz;
-    this->matPreRotate.matrix[2][2] *= sz;
+    this->matPreRotate.matrix[0][0] *= sx * size;
+    this->matPreRotate.matrix[0][1] *= sx * size;
+    this->matPreRotate.matrix[0][2] *= sx * size;
+    this->matPreRotate.matrix[1][0] *= sy * size;
+    this->matPreRotate.matrix[1][1] *= sy * size;
+    this->matPreRotate.matrix[1][2] *= sy * size;
+    this->matPreRotate.matrix[2][0] *= sz * size;
+    this->matPreRotate.matrix[2][1] *= sz * size;
+    this->matPreRotate.matrix[2][2] *= sz * size;
     this->matPreRotate.matrix[3][0] = tx;
     this->matPreRotate.matrix[3][1] = ty;
     this->matPreRotate.matrix[3][2] = tz;
@@ -416,6 +418,14 @@ MStatus harbieCurve::initialize() {
     nAttr.setReadable(true);
     CHECK_MSTATUS(addAttribute(_rot));
 
+    _size = nAttr.create("size", "sz", MFnNumericData::kDouble, 1.0);
+    nAttr.setDefault(1.);
+    nAttr.setStorable(true);
+    nAttr.setKeyable(true);
+    nAttr.setWritable(true);
+    nAttr.setReadable(true);
+    CHECK_MSTATUS(addAttribute(_size));
+
     // the type of deformation
     display = enumAttr.create("display", "display", 0);
     CHECK_MSTATUS(enumAttr.addField("Arrow", 0));
@@ -457,6 +467,7 @@ MStatus harbieCurve::initialize() {
         return stat;
     }
     stat = attributeAffects(harbieCurve::display, harbieCurve::outputCurve);
+    stat = attributeAffects(harbieCurve::_size, harbieCurve::outputCurve);
     stat = attributeAffects(harbieCurve::_trans, harbieCurve::outputCurve);
     stat = attributeAffects(harbieCurve::_transX, harbieCurve::outputCurve);
     stat = attributeAffects(harbieCurve::_transY, harbieCurve::outputCurve);

@@ -10,6 +10,7 @@
 MTypeId harbieLocator::id(0x001226F4);
 
 MObject harbieLocator::display;
+MObject harbieLocator::_size;
 MObject harbieLocator::_rotX;
 MObject harbieLocator::_rotY;
 MObject harbieLocator::_rotZ;
@@ -64,7 +65,7 @@ void harbieLocatorData::getPlugs(const MObject& node) {
     double ry = local_rotate.child(1).asDouble();
     double rz = local_rotate.child(2).asDouble();
     */
-
+    double size = MPlug(node, harbieLocator::_size).asDouble();
     float tx = MPlug(node, harbieLocator::localPositionX).asFloat();
     float ty = MPlug(node, harbieLocator::localPositionY).asFloat();
     float tz = MPlug(node, harbieLocator::localPositionZ).asFloat();
@@ -78,15 +79,15 @@ void harbieLocatorData::getPlugs(const MObject& node) {
     float rz = MPlug(node, harbieLocator::_rotZ).asFloat();
     MEulerRotation eulerRot(rx, ry, rz);
     this->matPreRotate = eulerRot.asMatrix();
-    this->matPreRotate.matrix[0][0] *= sx;
-    this->matPreRotate.matrix[0][1] *= sx;
-    this->matPreRotate.matrix[0][2] *= sx;
-    this->matPreRotate.matrix[1][0] *= sy;
-    this->matPreRotate.matrix[1][1] *= sy;
-    this->matPreRotate.matrix[1][2] *= sy;
-    this->matPreRotate.matrix[2][0] *= sz;
-    this->matPreRotate.matrix[2][1] *= sz;
-    this->matPreRotate.matrix[2][2] *= sz;
+    this->matPreRotate.matrix[0][0] *= sx * size;
+    this->matPreRotate.matrix[0][1] *= sx * size;
+    this->matPreRotate.matrix[0][2] *= sx * size;
+    this->matPreRotate.matrix[1][0] *= sy * size;
+    this->matPreRotate.matrix[1][1] *= sy * size;
+    this->matPreRotate.matrix[1][2] *= sy * size;
+    this->matPreRotate.matrix[2][0] *= sz * size;
+    this->matPreRotate.matrix[2][1] *= sz * size;
+    this->matPreRotate.matrix[2][2] *= sz * size;
     this->matPreRotate.matrix[3][0] = tx;
     this->matPreRotate.matrix[3][1] = ty;
     this->matPreRotate.matrix[3][2] = tz;
@@ -675,6 +676,14 @@ MStatus harbieLocator::initialize() {
     nAttr.setWritable(true);
     nAttr.setReadable(true);
     CHECK_MSTATUS(addAttribute(_rot));
+
+    _size = nAttr.create("size", "sz", MFnNumericData::kDouble, 1.0);
+    nAttr.setDefault(1.);
+    nAttr.setStorable(true);
+    nAttr.setKeyable(true);
+    nAttr.setWritable(true);
+    nAttr.setReadable(true);
+    CHECK_MSTATUS(addAttribute(_size));
 
     // the type of deformation
     display = enumAttr.create("display", "display", 0);

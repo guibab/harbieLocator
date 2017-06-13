@@ -72,6 +72,7 @@ class harbieCurve : public MPxNode {
    public:
     static MTypeId id;
     static MObject display;
+    static MObject _size;
     static MObject _transX;
     static MObject _transY;
     static MObject _transZ;

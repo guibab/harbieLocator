@@ -96,6 +96,7 @@ class harbieLocator : public MPxLocatorNode {
     static MStatus initialize();
 
     static MObject display;
+    static MObject _size;
     static MObject _rotX;
     static MObject _rotY;
     static MObject _rotZ;
