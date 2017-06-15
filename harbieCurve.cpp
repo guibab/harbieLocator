@@ -381,12 +381,12 @@ MStatus harbieCurve::initialize() {
     MStatus stat;
 
     _transX =
-        nAttr.create("localTranslateX", "ltx", MFnNumericData::kDouble, 0.0);
+        nAttr.create("localPositionX", "lpx", MFnNumericData::kDouble, 0.0);
     _transY =
-        nAttr.create("localTranslateY", "lty", MFnNumericData::kDouble, 0.0);
+        nAttr.create("localPositionY", "lpy", MFnNumericData::kDouble, 0.0);
     _transZ =
-        nAttr.create("localTranslateZ", "ltz", MFnNumericData::kDouble, 0.0);
-    _trans = nAttr.create("localTranslate", "lt", _transX, _transY, _transZ);
+        nAttr.create("localPositionZ", "lpz", MFnNumericData::kDouble, 0.0);
+    _trans = nAttr.create("localPosition", "lp", _transX, _transY, _transZ);
     nAttr.setDefault(0., 0., 0.);
     nAttr.setStorable(true);
     nAttr.setKeyable(true);
