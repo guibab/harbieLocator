@@ -23,8 +23,18 @@ harbieLocator::harbieLocator() : _update_attrs(true) {}
 harbieLocator::~harbieLocator() {}
 
 void harbieLocator::postConstructor() {
+    MStatus status;
     MObject self = thisMObject();
     MFnDependencyNode fn_node(self);
+
+    MString iconName("harbieLocator.png");
+    status = fn_node.setIcon(iconName);
+    if (MS::kSuccess != status) {
+        MGlobal::displayError(
+            "nodeIcon: the filename specified by the -icon flag could not be "
+            "opened");
+    }
+
     fn_node.setName("harbieLocatorShape#");
 
     _self = self;
