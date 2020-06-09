@@ -1,12 +1,15 @@
 cmake_minimum_required(VERSION 2.6)
 project(harbieLocator)
 
-SET(MAYA_VERSION 2016 CACHE STRING "Maya version number")
+SET(MAYA_VERSION 2019 CACHE STRING "Maya version number")
 SET(SOURCE_FILES 
-	"PluginMain.cpp"
-	"harbieLocator.cpp"
+	"harbieCurve.h"
     "harbieLocator.h"
     "shapesDefinition.h" 
+    "shapesDefinitionCurve.h" 
+	"harbieCurve.cpp"
+	"harbieLocator.cpp"
+	"PluginMain.cpp"
 )
 
 FIND_PACKAGE(OpenGL REQUIRED)
