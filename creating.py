@@ -14,8 +14,8 @@ print toPrint
 #------------------------------------------------------------------------------------------------------------------------
 #------------------------------------------------------------------------------------------------------------------------
 from maya import cmds
-cmds.loadPlugin ("harbieLocator.mll")
-cmds.loadPlugin (r"C:\Users\guillaume\Documents\DEV\Maya\cpp\harbieLocator\BUILD20165\Debug\harbieLocator.mll")
+#cmds.loadPlugin ("harbieLocator.mll")
+cmds.loadPlugin (r"C:\Users\guillaume\Documents\DEV\Maya\cpp\harbieLocator\BUILD2020Win10\Release\harbieLocator.mll")
 cmds.createNode ("harbieLocator")
 cmds.createNode ("makeHarbieCurve")
 
@@ -37,32 +37,42 @@ for x in range (nbLoc) :
             prt,=createNodeCurve ()
             cmds.xform (prt, t= [x,y,z])
 
+
+
+for i in range(22):
+    cmds.setAttr ("makeHarbieCurve1.display", i)
+    nameStr = cmds.getAttr ("makeHarbieCurve1.display", asString=True)
+    res = cmds.duplicate ("curve2", rr=True)
+    cmds.rename (res, nameStr )
+    form = cmds.getAttr (nameStr+".form",  asString=True)
+    if not cmds.objExists (form):
+        cmds.createNode("transform", n=form )
+    cmds.parent (nameStr, form )
+    #------------------------------------------------------------------------------------------------------------------------
 #------------------------------------------------------------------------------------------------------------------------
-#------------------------------------------------------------------------------------------------------------------------
+
+def create1000():
+
+  cmds.loadPlugin ("harbieLocator")
+
+  nbLoc = 10
+  for x in range (nbLoc) : 
+      for y in range (nbLoc) : 
+          for z in range (nbLoc) : 
+              loc = cmds.createNode ("harbieLocator")                    
+              prt,=cmds.listRelatives (loc, p=True)
+              cmds.xform (prt, t= [x,y,z])
 
 
 
 
-cmds.loadPlugin ("harbieLocator")
-
-nbLoc = 10
-for x in range (nbLoc) : 
-    for y in range (nbLoc) : 
-        for z in range (nbLoc) : 
-            loc = cmds.createNode ("harbieLocator")                    
-            prt,=cmds.listRelatives (loc, p=True)
-            cmds.xform (prt, t= [x,y,z])
-
-
-
-
-icon="Arrow"
-for x in range (nbLoc) : 
-    for y in range (nbLoc) : 
-        for z in range (nbLoc) : 
-          nd = cmds.createNode ("transform", n=icon )
-          tools.objects.createShape(nd, icon, 1.0, True)
-          cmds.xform (nd, t= [x,y,z])
+  icon="Arrow"
+  for x in range (nbLoc) : 
+      for y in range (nbLoc) : 
+          for z in range (nbLoc) : 
+            nd = cmds.createNode ("transform", n=icon )
+            tools.objects.createShape(nd, icon, 1.0, True)
+            cmds.xform (nd, t= [x,y,z])
 
 #------------------------------------------------------------------------------------------------------------------------
 #------------------------------------------------------------------------------------------------------------------------
@@ -241,7 +251,7 @@ cmds.loadPlugin ("harbieLocator")
 
 nbObj = 10
 type = "polyCube"
-type = "harbie""
+type = "harbie"
 for i in range (nbObj ):
     for j in range (nbObj ):
         for k in range (nbObj) : 

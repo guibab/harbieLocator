@@ -58,6 +58,7 @@
 #include <maya/MHWGeometryUtilities.h>
 #include <maya/MPointArray.h>
 #include <maya/MPxDrawOverride.h>
+#include <maya/MUintArray.h>
 #include <maya/MUserData.h>
 
 #include <vector>
@@ -97,6 +98,9 @@ class harbieLocator : public MPxLocatorNode {
 
     static MObject display;
     static MObject _size;
+    static MObject _showCenter;
+    static MObject _showOrientation;
+    static MObject _centerScale;
     static MObject _rotX;
     static MObject _rotY;
     static MObject _rotZ;
@@ -133,6 +137,9 @@ class harbieLocatorData : public MUserData {
     MColor fColor;
     std::vector<MPointArray> fLineList;
     std::vector<MPointArray> fTriangleList;
+    MPointArray fullLineList;
+    MUintArray fullListIndices;
+
     MBoundingBox theBoundingBox;
     MMatrix matPreRotate;
 };

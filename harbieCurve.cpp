@@ -11,6 +11,10 @@
 MObject harbieCurve::display;
 
 MObject harbieCurve::_size;
+MObject harbieCurve::_showCenter;
+MObject harbieCurve::_showOrientation;
+MObject harbieCurve::_centerScale;
+
 MObject harbieCurve::_rotX;
 MObject harbieCurve::_rotY;
 MObject harbieCurve::_rotZ;
@@ -32,34 +36,6 @@ MTypeId harbieCurve::id(0x001226F5);
 
 harbieCurve::harbieCurve() {}
 harbieCurve::~harbieCurve() {}
-/*
-
-void harbieCurve::postConstructor() {
-        MObject self = thisMObject();
-        MFnDependencyNode fn_node(self);
-        fn_node.setName("harbieCurveShape#");
-
-        _self = self;
-        _update_attrs = true;
-        MMatrix _transformMatrix;
-}
-*/
-/*
-MStatus harbieCurve::setDependentsDirty(const MPlug& dirty_plug, MPlugArray&
-affected_plugs) { MString plug_name_MString = dirty_plug.partialName();
-        std::string plug_name = plug_name_MString.asChar();
-        if( (plug_name == "lpx")|| (plug_name == "lpy")|| (plug_name == "lpz")
-){ _update_attrs = true;
-        }
-        if ((plug_name == "lsx") || (plug_name == "lsy") || (plug_name ==
-"lsz")) { _update_attrs = true;
-        }
-        if ((dirty_plug == _rot) || (dirty_plug == _rotX) || (dirty_plug ==
-_rotY) || (dirty_plug == _rotZ)) { _update_attrs = true;
-        }
-        return MS::kSuccess;
-}
-*/
 
 void harbieCurveData::getPlugs(const MObject& node) {
     MStatus status;
@@ -98,9 +74,20 @@ void harbieCurveData::get(const MObject& node, MMatrix matPreRotate) {
     MPlug displayType(node, harbieCurve::display);
     int displayIndex = displayType.asInt();
 
-    this->fLineList.clear();
-    this->fLineList.resize(1);
-    MPointArray& linesPoints = this->fLineList[0];
+    int sizeToresize = 1;
+
+    MPlug centerScalePlug(node, harbieCurve::_centerScale);
+    float centerScale = centerScalePlug.asFloat();
+
+    MPlug showCenterPlug(node, harbieCurve::_showCenter);
+    bool showCenter = showCenterPlug.asBool();
+    if (showCenter) sizeToresize++;
+
+    MPlug showOrientationPlug(node, harbieCurve::_showOrientation);
+    bool showOrientation = showOrientationPlug.asBool();
+    if (showOrientation) sizeToresize++;
+
+    MPointArray linesPoints;
 
     if (displayIndex == 0) {  // arrow
         for (int i = 0; i < arrowCount; i++)
@@ -266,6 +253,107 @@ void harbieCurveData::get(const MObject& node, MMatrix matPreRotate) {
                                matPreRotate);
         this->isOpen = squareisOpen;
         this->degree = squareDegree;
+    } else if (displayIndex == 17) {  // lookAt
+        for (int i = 0; i < lookAtCount; i++)
+            linesPoints.append(MPoint(listLinesLookat[i][0],
+                                      listLinesLookat[i][1],
+                                      listLinesLookat[i][2]) *
+                               matPreRotate);
+        this->isOpen = lookAtisOpen;
+        this->degree = lookAtDegree;
+    } else if (displayIndex == 18) {  // BendedArrow
+        for (int i = 0; i < bendedArrowCount; i++)
+            linesPoints.append(MPoint(listLinesBendedarrow[i][0],
+                                      listLinesBendedarrow[i][1],
+                                      listLinesBendedarrow[i][2]) *
+                               matPreRotate);
+        this->isOpen = bendedArrowisOpen;
+        this->degree = bendedArrowDegree;
+    } else if (displayIndex == 19) {  // RotateArrow
+        for (int i = 0; i < rotateArrowCount; i++)
+            linesPoints.append(MPoint(listLinesRotatearrow[i][0],
+                                      listLinesRotatearrow[i][1],
+                                      listLinesRotatearrow[i][2]) *
+                               matPreRotate);
+        this->isOpen = rotateArrowisOpen;
+        this->degree = rotateArrowDegree;
+    } else if (displayIndex == 20) {  // Gear
+        for (int i = 0; i < gearCount; i++)
+            linesPoints.append(MPoint(listLinesGear[i][0], listLinesGear[i][1],
+                                      listLinesGear[i][2]) *
+                               matPreRotate);
+        this->isOpen = gearisOpen;
+        this->degree = gearDegree;
+    } else if (displayIndex == 21) {  // Lungs
+        for (int i = 0; i < lungCount; i++)
+            linesPoints.append(MPoint(listLinesLung[i][0], listLinesLung[i][1],
+                                      listLinesLung[i][2]) *
+                               matPreRotate);
+        this->isOpen = lungisOpen;
+        this->degree = lungDegree;
+    }
+
+    this->fullLineList.copy(linesPoints);
+    if (showCenter) {
+        if (this->degree == 1) {
+            for (int i = 0; i < nullDeg1Count; i++) {
+                this->fullLineList.append(
+                    MPoint(listLinesNulldeg1[i][0] * centerScale,
+                           listLinesNulldeg1[i][1] * centerScale,
+                           listLinesNulldeg1[i][2] * centerScale));
+            }
+        } else {
+            int len = this->fullLineList.length();
+            MPoint last = this->fullLineList[len - 1];
+            this->fullLineList.append(last);
+            this->fullLineList.append(last);
+            int i = 0;
+            this->fullLineList.append(
+                MPoint(listLinesNulldeg3[i][0] * centerScale,
+                       listLinesNulldeg3[i][1] * centerScale,
+                       listLinesNulldeg3[i][2] * centerScale));
+            this->fullLineList.append(
+                MPoint(listLinesNulldeg3[i][0] * centerScale,
+                       listLinesNulldeg3[i][1] * centerScale,
+                       listLinesNulldeg3[i][2] * centerScale));
+            for (int i = 0; i < nullDeg3Count; i++) {
+                this->fullLineList.append(
+                    MPoint(listLinesNulldeg3[i][0] * centerScale,
+                           listLinesNulldeg3[i][1] * centerScale,
+                           listLinesNulldeg3[i][2] * centerScale));
+            }
+        }
+    }
+
+    if (showOrientation) {
+        if (this->degree == 1) {
+            for (int i = 0; i < lookatdeg1Count; i++) {
+                this->fullLineList.append(
+                    MPoint(listLinesLookatdeg1[i][0] * centerScale,
+                           listLinesLookatdeg1[i][1] * centerScale,
+                           listLinesLookatdeg1[i][2] * centerScale));
+            }
+        } else {
+            int len = this->fullLineList.length();
+            MPoint last = this->fullLineList[len - 1];
+            this->fullLineList.append(last);
+            this->fullLineList.append(last);
+            int i = 0;
+            this->fullLineList.append(
+                MPoint(listLinesLookatdeg3[i][0] * centerScale,
+                       listLinesLookatdeg3[i][1] * centerScale,
+                       listLinesLookatdeg3[i][2] * centerScale));
+            this->fullLineList.append(
+                MPoint(listLinesLookatdeg3[i][0] * centerScale,
+                       listLinesLookatdeg3[i][1] * centerScale,
+                       listLinesLookatdeg3[i][2] * centerScale));
+            for (int i = 0; i < lookatdeg3Count; i++) {
+                this->fullLineList.append(
+                    MPoint(listLinesLookatdeg3[i][0] * centerScale,
+                           listLinesLookatdeg3[i][1] * centerScale,
+                           listLinesLookatdeg3[i][2] * centerScale));
+            }
+        }
     }
 }
 
@@ -282,7 +370,8 @@ MStatus harbieCurve::compute(const MPlug& plug, MDataBlock& data) {
     // Draw the outline of the foot
     //
     MPointArray listOfLinesPoints;
-    listOfLinesPoints = curveData.fLineList[0];
+    // listOfLinesPoints = curveData.fLineList[0];
+    listOfLinesPoints = curveData.fullLineList;
     int nbLines = curveData.fLineList.size();
 
     MDataHandle outputCurve_DataHandle =
@@ -445,6 +534,11 @@ MStatus harbieCurve::initialize() {
     CHECK_MSTATUS(enumAttr.addField("Sphere", 14));
     CHECK_MSTATUS(enumAttr.addField("Spine", 15));
     CHECK_MSTATUS(enumAttr.addField("Square", 16));
+    CHECK_MSTATUS(enumAttr.addField("LookAt", 17));
+    CHECK_MSTATUS(enumAttr.addField("BendedArrow", 18));
+    CHECK_MSTATUS(enumAttr.addField("RotateArrow", 19));
+    CHECK_MSTATUS(enumAttr.addField("Gear", 20));
+    CHECK_MSTATUS(enumAttr.addField("Lung", 21));
 
     CHECK_MSTATUS(enumAttr.setStorable(true));
     CHECK_MSTATUS(enumAttr.setKeyable(true));
@@ -453,6 +547,33 @@ MStatus harbieCurve::initialize() {
     CHECK_MSTATUS(enumAttr.setCached(false));
 
     CHECK_MSTATUS(addAttribute(display));
+
+    _showCenter =
+        nAttr.create("ShowCenter", "sc", MFnNumericData::kBoolean, false);
+    nAttr.setDefault(false);
+    nAttr.setStorable(true);
+    nAttr.setKeyable(true);
+    nAttr.setWritable(true);
+    nAttr.setReadable(true);
+    CHECK_MSTATUS(addAttribute(_showCenter));
+
+    _showOrientation =
+        nAttr.create("ShowOrientation", "so", MFnNumericData::kBoolean, false);
+    nAttr.setDefault(false);
+    nAttr.setStorable(true);
+    nAttr.setKeyable(true);
+    nAttr.setWritable(true);
+    nAttr.setReadable(true);
+    CHECK_MSTATUS(addAttribute(_showOrientation));
+
+    _centerScale =
+        nAttr.create("CenterScale", "cc", MFnNumericData::kDouble, 1.0);
+    nAttr.setDefault(1.);
+    nAttr.setStorable(true);
+    nAttr.setKeyable(true);
+    nAttr.setWritable(true);
+    nAttr.setReadable(true);
+    CHECK_MSTATUS(addAttribute(_centerScale));
 
     outputCurve = typedAttr.create("outputCurve", "oc", MFnData::kNurbsCurve);
     typedAttr.setStorable(false);
@@ -467,6 +588,11 @@ MStatus harbieCurve::initialize() {
         return stat;
     }
     stat = attributeAffects(harbieCurve::display, harbieCurve::outputCurve);
+    stat = attributeAffects(harbieCurve::_showCenter, harbieCurve::outputCurve);
+    stat = attributeAffects(harbieCurve::_showOrientation,
+                            harbieCurve::outputCurve);
+    stat =
+        attributeAffects(harbieCurve::_centerScale, harbieCurve::outputCurve);
     stat = attributeAffects(harbieCurve::_size, harbieCurve::outputCurve);
     stat = attributeAffects(harbieCurve::_trans, harbieCurve::outputCurve);
     stat = attributeAffects(harbieCurve::_transX, harbieCurve::outputCurve);

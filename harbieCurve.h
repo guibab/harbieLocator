@@ -50,6 +50,7 @@ class harbieCurveData : public MUserData {
 
     MColor fColor;
     std::vector<MPointArray> fLineList;
+    MPointArray fullLineList;
     MMatrix matPreRotate;
     bool isOpen;
     int degree;
@@ -73,6 +74,9 @@ class harbieCurve : public MPxNode {
     static MTypeId id;
     static MObject display;
     static MObject _size;
+    static MObject _showCenter;
+    static MObject _showOrientation;
+    static MObject _centerScale;
     static MObject _transX;
     static MObject _transY;
     static MObject _transZ;

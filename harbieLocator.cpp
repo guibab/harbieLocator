@@ -11,6 +11,10 @@ MTypeId harbieLocator::id(0x001226F4);
 
 MObject harbieLocator::display;
 MObject harbieLocator::_size;
+MObject harbieLocator::_showCenter;
+MObject harbieLocator::_showOrientation;
+MObject harbieLocator::_centerScale;
+
 MObject harbieLocator::_rotX;
 MObject harbieLocator::_rotY;
 MObject harbieLocator::_rotZ;
@@ -108,12 +112,46 @@ void harbieLocatorData::get(const MObject& node, MMatrix matPreRotate) {
     // MMatrix matPreRotate = node._transformMatrix;
     MPlug displayType(node, harbieLocator::display);
     int displayIndex = displayType.asInt();
+    int sizeToresize = 1;
+
+    MPlug centerScalePlug(node, harbieLocator::_centerScale);
+    float centerScale = centerScalePlug.asFloat();
+
+    MPlug showCenterPlug(node, harbieLocator::_showCenter);
+    bool showCenter = showCenterPlug.asBool();
+    if (showCenter) sizeToresize++;
+
+    MPlug showOrientationPlug(node, harbieLocator::_showOrientation);
+    bool showOrientation = showOrientationPlug.asBool();
+    if (showOrientation) sizeToresize++;
 
     this->fLineList.clear();
     this->fTriangleList.clear();
 
-    this->fLineList.resize(1);
+    this->fLineList.resize(sizeToresize);
     MPointArray& linesPoints = this->fLineList[0];
+    linesPoints.clear();
+    int currentInd = 0;
+    if (showCenter) {
+        currentInd++;
+        MPointArray& linesPointsCenter = this->fLineList[currentInd];
+        linesPointsCenter.clear();
+        for (int i = 0; i < nullCount; i++)
+            linesPointsCenter.append(
+                MPoint(listLinesNull[i][0] * centerScale * 0.5,
+                       listLinesNull[i][1] * centerScale * 0.5,
+                       listLinesNull[i][2] * centerScale * 0.5));
+    }
+    if (showOrientation) {
+        currentInd++;
+        MPointArray& linesPointsCenterOrientation = this->fLineList[currentInd];
+        linesPointsCenterOrientation.clear();
+        for (int i = 0; i < lookAtCount; i++)
+            linesPointsCenterOrientation.append(
+                MPoint(listLinesLookat[i][0] * centerScale,
+                       listLinesLookat[i][1] * centerScale,
+                       listLinesLookat[i][2] * centerScale));
+    }
 
     if (displayIndex == 0) {  // arrow
         for (int i = 0; i < arrowCount; i++)
@@ -245,68 +283,53 @@ void harbieLocatorData::get(const MObject& node, MMatrix matPreRotate) {
                                       listLinesSquare[i][1],
                                       listLinesSquare[i][2]) *
                                matPreRotate);
+    } else if (displayIndex == 17) {  // lookAt
+        for (int i = 0; i < lookAtCount; i++)
+            linesPoints.append(MPoint(listLinesLookat[i][0],
+                                      listLinesLookat[i][1],
+                                      listLinesLookat[i][2]) *
+                               matPreRotate);
+    } else if (displayIndex == 18) {  // bended arrow
+        for (int i = 0; i < bendedArrowCount; i++)
+            linesPoints.append(MPoint(listLinesBendedarrow[i][0],
+                                      listLinesBendedarrow[i][1],
+                                      listLinesBendedarrow[i][2]) *
+                               matPreRotate);
+    } else if (displayIndex == 19) {  // rotate arrow
+        for (int i = 0; i < rotateArrowCount; i++)
+            linesPoints.append(MPoint(listLinesRotatearrow[i][0],
+                                      listLinesRotatearrow[i][1],
+                                      listLinesRotatearrow[i][2]) *
+                               matPreRotate);
+    } else if (displayIndex == 20) {  // gear
+        for (int i = 0; i < gearCount; i++)
+            linesPoints.append(MPoint(listLinesGear[i][0], listLinesGear[i][1],
+                                      listLinesGear[i][2]) *
+                               matPreRotate);
+    } else if (displayIndex == 21) {  // lung
+        for (int i = 0; i < lungsCount; i++)
+            linesPoints.append(MPoint(listLinesLungs[i][0],
+                                      listLinesLungs[i][1],
+                                      listLinesLungs[i][2]) *
+                               matPreRotate);
     }
 
-    /*
-    if (displayIndex == 0) { // foot
-            this->fLineList.resize(2);
-            this->fTriangleList.resize(2);
-            for (int i = 0; i < soleCount; i++)
-            {
-                    this->fLineList[0].append(MPoint(sole[i][0], sole[i][1],
-    sole[i][2])*matPreRotate);
+    // could be better
+    this->fullLineList.clear();
+    this->fullListIndices.clear();
+    int nbLines = this->fLineList.size();
+    for (int i = 0; i < nbLines; ++i) {
+        int nbVertices = this->fLineList[i].length();
+        int startPt = this->fullLineList.length();
 
-            }
-            for (int i = 0; i < heelCount; i++)
-            {
-                    this->fLineList[1].append(MPoint(heel[i][0], heel[i][1],
-    heel[i][2])*matPreRotate);
-            }
-            for (int i = 1; i <= soleCount - 2; i++)
-            {
-                    this->fTriangleList[0].append(MPoint(sole[0][0], sole[0][1],
-    sole[0][2])*matPreRotate); this->fTriangleList[0].append(MPoint(sole[i][0],
-    sole[i][1], sole[i][2])*matPreRotate);
-                    this->fTriangleList[0].append(MPoint(sole[i + 1][0], sole[i
-    + 1][1], sole[i + 1][2])*matPreRotate);
-            }
-            for (int i = 1; i <= heelCount - 2; i++)
-            {
-                    this->fTriangleList[1].append(MPoint(heel[0][0], heel[0][1]
-    , heel[0][2] )*matPreRotate);
-                    this->fTriangleList[1].append(MPoint(heel[i][0], heel[i][1]
-    , heel[i][2] )*matPreRotate); this->fTriangleList[1].append(MPoint(heel[i +
-    1][0] , heel[i + 1][1] , heel[i + 1][2] )*matPreRotate);
-            }
+        for (int j = 0; j < nbVertices; ++j)
+            this->fullLineList.append(this->fLineList[i][j]);
+
+        for (int j = 1; j < nbVertices; ++j) {
+            this->fullListIndices.append(startPt + j - 1);
+            this->fullListIndices.append(startPt + j);
+        }
     }
-    else if (displayIndex == 1) { // cube
-            this->fLineList.resize(1);
-            MPointArray& linesPoints = this->fLineList[0];
-            for (int i = 0; i < linesCount; i++)
-            {
-                    linesPoints.append(MPoint(listLines[i][0], listLines[i][1],
-    listLines[i][2]) * matPreRotate);
-            }
-    }
-    else if (displayIndex == 2) { // rings
-            this->fLineList.resize(3);
-            for (int i = 0; i < sphereLinesCount; i++)
-            {
-                    this->fLineList[0].append(MPoint(sphereLines1[i][0],
-    sphereLines1[i][1], sphereLines1[i][2]) * matPreRotate);
-            }
-            for (int i = 0; i < sphereLinesCount; i++)
-            {
-                    this->fLineList[1].append(MPoint(sphereLines2[i][0],
-    sphereLines2[i][1], sphereLines2[i][2]) * matPreRotate);
-            }
-            for (int i = 0; i < sphereLinesCount; i++)
-            {
-                    this->fLineList[2].append(MPoint(sphereLines3[i][0],
-    sphereLines3[i][1], sphereLines3[i][2]) * matPreRotate);
-            }
-    }
-    */
 }
 
 void harbieLocatorData::getBB(const MObject& node, MMatrix matPreRotate) {
@@ -433,9 +456,48 @@ void harbieLocatorData::getBB(const MObject& node, MMatrix matPreRotate) {
         this->theBoundingBox = MBoundingBox(
             MPoint(squareBB[0][0], squareBB[0][1], squareBB[0][2]),
             MPoint(squareBB[1][0], squareBB[1][1], squareBB[1][2]));
+    } else if (displayIndex == 17) {  // lookAt
+        this->theBoundingBox = MBoundingBox(
+            MPoint(lookAtBB[0][0], lookAtBB[0][1], lookAtBB[0][2]),
+            MPoint(lookAtBB[1][0], lookAtBB[1][1], lookAtBB[1][2]));
+    } else if (displayIndex == 18) {  // bendedArrow
+        this->theBoundingBox =
+            MBoundingBox(MPoint(bendedArrowBB[0][0], bendedArrowBB[0][1],
+                                bendedArrowBB[0][2]),
+                         MPoint(bendedArrowBB[1][0], bendedArrowBB[1][1],
+                                bendedArrowBB[1][2]));
+    } else if (displayIndex == 19) {  // rotateArrow
+        this->theBoundingBox =
+            MBoundingBox(MPoint(rotateArrowBB[0][0], rotateArrowBB[0][1],
+                                rotateArrowBB[0][2]),
+                         MPoint(rotateArrowBB[1][0], rotateArrowBB[1][1],
+                                rotateArrowBB[1][2]));
+    } else if (displayIndex == 20) {  // gear
+        this->theBoundingBox =
+            MBoundingBox(MPoint(gearBB[0][0], gearBB[0][1], gearBB[0][2]),
+                         MPoint(gearBB[1][0], gearBB[1][1], gearBB[1][2]));
+    } else if (displayIndex == 21) {  // lungs
+        this->theBoundingBox =
+            MBoundingBox(MPoint(lungsBB[0][0], lungsBB[0][1], lungsBB[0][2]),
+                         MPoint(lungsBB[1][0], lungsBB[1][1], lungsBB[1][2]));
     }
-
     this->theBoundingBox.transformUsing(matPreRotate);
+
+    MPlug centerScalePlug(node, harbieLocator::_centerScale);
+    float centerScale = centerScalePlug.asFloat();
+
+    MBoundingBox centerBB = MBoundingBox(
+        MPoint(0.5 * centerScale, 0.5 * centerScale, 0.5 * centerScale),
+        MPoint(-0.5 * centerScale, -0.5 * centerScale, -0.5 * centerScale));
+    MPlug showCenterPlug(node, harbieLocator::_showCenter);
+    bool showCenter = showCenterPlug.asBool();
+    if (!showCenter) {
+        MPlug showOrientationPlug(node, harbieLocator::_showOrientation);
+        bool showCenter = showOrientationPlug.asBool();
+    }
+    if (showCenter) {
+        this->theBoundingBox.expand(centerBB);
+    }
 }
 MStatus harbieLocator::compute(const MPlug& plug, MDataBlock& /*data*/) {
     return MS::kSuccess;
@@ -641,14 +703,33 @@ void harbieLocatorDrawOverride::addUIDrawables(
                              pLocatorData->fTriangleList[i]);
         }
     }
+
+    /*
+    MPointArray linesPoints;
+    MUintArray listIndices;
+
     int nbLines = pLocatorData->fLineList.size();
     for (int i = 0; i < nbLines; ++i) {
-        drawManager.mesh(MHWRender::MUIDrawManager::kLineStrip,
-                         pLocatorData->fLineList[i]);
-    }
+            int nbVertices = pLocatorData->fLineList[i].length();
+            int startPt = linesPoints.length();
 
-    // Draw a text "Foot"
+            for (int j = 0; j < nbVertices; ++j)
+                    linesPoints.append(pLocatorData->fLineList[i][j]);
+
+            for (int j = 1; j < nbVertices; ++j) {
+                    listIndices.append(startPt + j - 1);
+                    listIndices.append(startPt + j);
+            }
+    }
+    drawManager.mesh(MHWRender::MUIDrawManager::kLines, linesPoints, NULL, NULL,
+    &listIndices, NULL);
+    */
+    drawManager.mesh(MHWRender::MUIDrawManager::kLines,
+                     pLocatorData->fullLineList, NULL, NULL,
+                     &pLocatorData->fullListIndices, NULL);
     /*
+
+    // Draw a text "harbieLocator"
     MPoint pos( 0.0, 0.0, 0.0 ); // Position of the text
     MColor textColor( 0.1f, 0.8f, 0.8f, 1.0f ); // Text color
 
@@ -719,6 +800,11 @@ MStatus harbieLocator::initialize() {
     CHECK_MSTATUS(enumAttr.addField("Sphere", 14));
     CHECK_MSTATUS(enumAttr.addField("Spine", 15));
     CHECK_MSTATUS(enumAttr.addField("Square", 16));
+    CHECK_MSTATUS(enumAttr.addField("LookAt", 17));
+    CHECK_MSTATUS(enumAttr.addField("BendedArrow", 18));
+    CHECK_MSTATUS(enumAttr.addField("RotateArrow", 19));
+    CHECK_MSTATUS(enumAttr.addField("Gear", 20));
+    CHECK_MSTATUS(enumAttr.addField("Lung", 21));
 
     CHECK_MSTATUS(enumAttr.setStorable(true));
     CHECK_MSTATUS(enumAttr.setKeyable(true));
@@ -727,6 +813,33 @@ MStatus harbieLocator::initialize() {
     CHECK_MSTATUS(enumAttr.setCached(false));
 
     CHECK_MSTATUS(addAttribute(display));
+
+    _showCenter =
+        nAttr.create("ShowCenter", "sc", MFnNumericData::kBoolean, false);
+    nAttr.setDefault(false);
+    nAttr.setStorable(true);
+    nAttr.setKeyable(true);
+    nAttr.setWritable(true);
+    nAttr.setReadable(true);
+    CHECK_MSTATUS(addAttribute(_showCenter));
+
+    _showOrientation =
+        nAttr.create("ShowOrientation", "so", MFnNumericData::kBoolean, false);
+    nAttr.setDefault(false);
+    nAttr.setStorable(true);
+    nAttr.setKeyable(true);
+    nAttr.setWritable(true);
+    nAttr.setReadable(true);
+    CHECK_MSTATUS(addAttribute(_showOrientation));
+
+    _centerScale =
+        nAttr.create("CenterScale", "cc", MFnNumericData::kDouble, 1.0);
+    nAttr.setDefault(1.);
+    nAttr.setStorable(true);
+    nAttr.setKeyable(true);
+    nAttr.setWritable(true);
+    nAttr.setReadable(true);
+    CHECK_MSTATUS(addAttribute(_centerScale));
 
     return MS::kSuccess;
 }
