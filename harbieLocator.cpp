@@ -486,17 +486,25 @@ void harbieLocatorData::getBB(const MObject& node, MMatrix matPreRotate) {
     MPlug centerScalePlug(node, harbieLocator::_centerScale);
     float centerScale = centerScalePlug.asFloat();
 
-    MBoundingBox centerBB = MBoundingBox(
-        MPoint(0.5 * centerScale, 0.5 * centerScale, 0.5 * centerScale),
-        MPoint(-0.5 * centerScale, -0.5 * centerScale, -0.5 * centerScale));
     MPlug showCenterPlug(node, harbieLocator::_showCenter);
     bool showCenter = showCenterPlug.asBool();
-    if (!showCenter) {
-        MPlug showOrientationPlug(node, harbieLocator::_showOrientation);
-        bool showCenter = showOrientationPlug.asBool();
-    }
+
+    MPlug showOrientationPlug(node, harbieLocator::_showOrientation);
+    bool showOrientation = showOrientationPlug.asBool();
+
     if (showCenter) {
+        MBoundingBox centerBB = MBoundingBox(
+            MPoint(0.5 * centerScale, 0.5 * centerScale, 0.5 * centerScale),
+            MPoint(-0.5 * centerScale, -0.5 * centerScale, -0.5 * centerScale));
         this->theBoundingBox.expand(centerBB);
+    }
+    if (showOrientation) {
+        MBoundingBox showOrientationBB(
+            MPoint(centerScale * lookAtBB[0][0], centerScale * lookAtBB[0][1],
+                   centerScale * lookAtBB[0][2]),
+            MPoint(centerScale * lookAtBB[1][0], centerScale * lookAtBB[1][1],
+                   centerScale * lookAtBB[1][2]));
+        this->theBoundingBox.expand(showOrientationBB);
     }
 }
 MStatus harbieLocator::compute(const MPlug& plug, MDataBlock& /*data*/) {
