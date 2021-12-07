@@ -14,16 +14,22 @@ MObject harbieLocator::_size;
 MObject harbieLocator::_showCenter;
 MObject harbieLocator::_showOrientation;
 MObject harbieLocator::_centerScale;
+MObject harbieLocator::_distanceDisplay;
 
 MObject harbieLocator::_rotX;
 MObject harbieLocator::_rotY;
 MObject harbieLocator::_rotZ;
 MObject harbieLocator::_rot;
 
+MObject harbieLocator::_updateAttrs;
+
 MString harbieLocator::drawDbClassification("drawdb/geometry/harbieLocator");
 MString harbieLocator::drawRegistrantId("harbieLocatorNodePlugin");
 
-harbieLocator::harbieLocator() : _update_attrs(true) {}
+harbieLocator::harbieLocator()
+//:_update_attrs(true)
+{}
+
 harbieLocator::~harbieLocator() {}
 
 void harbieLocator::postConstructor() {
@@ -42,43 +48,51 @@ void harbieLocator::postConstructor() {
     fn_node.setName("harbieLocatorShape#");
 
     _self = self;
-    _update_attrs = true;
-    MMatrix _transformMatrix;
+    //_update_attrs = true;
+    // MMatrix _transformMatrix;
 }
-/*
-MStatus harbieLocator::setDependentsDirty(const MPlug& dirty_plug, MPlugArray&
-affected_plugs) { MString plug_name_MString = dirty_plug.partialName();
-        std::string plug_name = plug_name_MString.asChar();
-        if( (plug_name == "lpx")|| (plug_name == "lpy")|| (plug_name == "lpz")
-){ _update_attrs = true;
-        }
-        if ((plug_name == "lsx") || (plug_name == "lsy") || (plug_name ==
-"lsz")) { _update_attrs = true;
-        }
-        if ((dirty_plug == _rot) || (dirty_plug == _rotX) || (dirty_plug ==
-_rotY) || (dirty_plug == _rotZ)) { _update_attrs = true;
-        }
-        return MS::kSuccess;
+
+MStatus harbieLocator::setDependentsDirty(const MPlug& dirty_plug,
+                                          MPlugArray& affected_plugs) {
+    MString plug_name_MString = dirty_plug.partialName();
+    std::string plug_name = plug_name_MString.asChar();
+    bool doUpdateAttr = false;
+    if ((plug_name == "lpx") || (plug_name == "lpy") || (plug_name == "lpz")) {
+        doUpdateAttr = true;
+    }
+    if ((plug_name == "lsx") || (plug_name == "lsy") || (plug_name == "lsz")) {
+        doUpdateAttr = true;
+    }
+    if ((dirty_plug == _rot) || (dirty_plug == _rotX) ||
+        (dirty_plug == _rotY) || (dirty_plug == _rotZ)) {
+        doUpdateAttr = true;
+    }
+    if ((dirty_plug == display) || (dirty_plug == _size) ||
+        (dirty_plug == _showCenter) || (dirty_plug == _showOrientation) ||
+        (dirty_plug == _centerScale) || (dirty_plug == _distanceDisplay)) {
+        doUpdateAttr = true;
+    }
+    // MPlug(_updateAtts
+    if (doUpdateAttr) {
+        MPlug updateAttrsPlug(_self, _updateAttrs);
+        updateAttrsPlug.setBool(true);
+    }
+
+    return MS::kSuccess;
 }
-*/
+
+void harbieLocatorData::checkUpdateAttr(const MObject& node) {
+    MPlug updateAttrsPlug(node, harbieLocator::_updateAttrs);
+    bool updateAttrsVal = updateAttrsPlug.asBool();
+    if (updateAttrsVal) {
+        this->updateAttrs = true;
+    }
+    // this->updateAttrs |= updateAttrsVal;
+    // this->updateAttrs = true;
+}
+
 void harbieLocatorData::getPlugs(const MObject& node) {
     MStatus status;
-    /*
-    MPlug local_position(node, harbieLocator::localPosition);
-    float tx = local_position.child(0).asFloat();
-    float ty = local_position.child(1).asFloat();
-    float tz = local_position.child(2).asFloat();
-
-    MPlug local_scale(node, harbieLocator::localScale);
-    float sx = local_scale.child(0).asFloat();
-    float sy = local_scale.child(1).asFloat();
-    float sz = local_scale.child(2).asFloat();
-
-    MPlug local_rotate(node, harbieLocator::_rot);
-    double rx = local_rotate.child(0).asDouble();
-    double ry = local_rotate.child(1).asDouble();
-    double rz = local_rotate.child(2).asDouble();
-    */
     double size = MPlug(node, harbieLocator::_size).asDouble();
     float tx = MPlug(node, harbieLocator::localPositionX).asFloat();
     float ty = MPlug(node, harbieLocator::localPositionY).asFloat();
@@ -91,6 +105,17 @@ void harbieLocatorData::getPlugs(const MObject& node) {
     float rx = MPlug(node, harbieLocator::_rotX).asFloat();
     float ry = MPlug(node, harbieLocator::_rotY).asFloat();
     float rz = MPlug(node, harbieLocator::_rotZ).asFloat();
+
+    this->displayIndex = MPlug(node, harbieLocator::display).asInt();
+    this->centerScale = MPlug(node, harbieLocator::_centerScale).asFloat();
+    this->showCenter = MPlug(node, harbieLocator::_showCenter).asBool();
+    this->showOrientation =
+        MPlug(node, harbieLocator::_showOrientation).asBool();
+
+    this->distanceDisplay =
+        MPlug(node, harbieLocator::_distanceDisplay).asDouble();
+    this->computeCameraAdjustment = this->distanceDisplay > 0;
+
     MEulerRotation eulerRot(rx, ry, rz);
     this->matPreRotate = eulerRot.asMatrix();
     this->matPreRotate.matrix[0][0] *= sx * size;
@@ -106,23 +131,10 @@ void harbieLocatorData::getPlugs(const MObject& node) {
     this->matPreRotate.matrix[3][1] = ty;
     this->matPreRotate.matrix[3][2] = tz;
 }
-void harbieLocatorData::get(const MObject& node, MMatrix matPreRotate) {
+void harbieLocatorData::getListOfPoints(const MObject& node) {
     MStatus status;
-
-    // MMatrix matPreRotate = node._transformMatrix;
-    MPlug displayType(node, harbieLocator::display);
-    int displayIndex = displayType.asInt();
     int sizeToresize = 1;
-
-    MPlug centerScalePlug(node, harbieLocator::_centerScale);
-    float centerScale = centerScalePlug.asFloat();
-
-    MPlug showCenterPlug(node, harbieLocator::_showCenter);
-    bool showCenter = showCenterPlug.asBool();
     if (showCenter) sizeToresize++;
-
-    MPlug showOrientationPlug(node, harbieLocator::_showOrientation);
-    bool showOrientation = showOrientationPlug.asBool();
     if (showOrientation) sizeToresize++;
 
     this->fLineList.clear();
@@ -136,195 +148,234 @@ void harbieLocatorData::get(const MObject& node, MMatrix matPreRotate) {
         currentInd++;
         MPointArray& linesPointsCenter = this->fLineList[currentInd];
         linesPointsCenter.clear();
-        for (int i = 0; i < nullCount; i++)
-            linesPointsCenter.append(
-                MPoint(listLinesNull[i][0] * centerScale * 0.5,
-                       listLinesNull[i][1] * centerScale * 0.5,
-                       listLinesNull[i][2] * centerScale * 0.5));
+        for (int i = 0; i < nullCount; i++) {
+            MPoint pt = MPoint(listLinesNull[i][0] * centerScale * 0.5,
+                               listLinesNull[i][1] * centerScale * 0.5,
+                               listLinesNull[i][2] * centerScale * 0.5);
+            linesPointsCenter.append(pt);
+        }
     }
     if (showOrientation) {
         currentInd++;
         MPointArray& linesPointsCenterOrientation = this->fLineList[currentInd];
         linesPointsCenterOrientation.clear();
-        for (int i = 0; i < lookAtCount; i++)
-            linesPointsCenterOrientation.append(
-                MPoint(listLinesLookat[i][0] * centerScale,
-                       listLinesLookat[i][1] * centerScale,
-                       listLinesLookat[i][2] * centerScale));
+        for (int i = 0; i < lookAtCount; i++) {
+            MPoint pt = MPoint(listLinesLookat[i][0] * centerScale,
+                               listLinesLookat[i][1] * centerScale,
+                               listLinesLookat[i][2] * centerScale);
+            linesPointsCenterOrientation.append(pt);
+        }
     }
 
     if (displayIndex == 0) {  // arrow
-        for (int i = 0; i < arrowCount; i++)
-            linesPoints.append(MPoint(listLinesArrow[i][0],
-                                      listLinesArrow[i][1],
-                                      listLinesArrow[i][2]) *
-                               matPreRotate);
+        for (int i = 0; i < arrowCount; i++) {
+            MPoint pt = MPoint(listLinesArrow[i][0], listLinesArrow[i][1],
+                               listLinesArrow[i][2]) *
+                        matPreRotate;
+            linesPoints.append(pt);
+        }
     }
 
     else if (displayIndex == 1) {  // bone
-        for (int i = 0; i < boneCount; i++)
-            linesPoints.append(MPoint(listLinesBone[i][0], listLinesBone[i][1],
-                                      listLinesBone[i][2]) *
-                               matPreRotate);
+        for (int i = 0; i < boneCount; i++) {
+            MPoint pt = MPoint(listLinesBone[i][0], listLinesBone[i][1],
+                               listLinesBone[i][2]) *
+                        matPreRotate;
+            linesPoints.append(pt);
+        }
     }
 
     else if (displayIndex == 2) {  // circle
-        for (int i = 0; i < circleCount; i++)
-            linesPoints.append(MPoint(listLinesCircle[i][0],
-                                      listLinesCircle[i][1],
-                                      listLinesCircle[i][2]) *
-                               matPreRotate);
+        for (int i = 0; i < circleCount; i++) {
+            MPoint pt = MPoint(listLinesCircle[i][0], listLinesCircle[i][1],
+                               listLinesCircle[i][2]) *
+                        matPreRotate;
+            linesPoints.append(pt);
+        }
     }
 
     else if (displayIndex == 3) {  // compass
-        for (int i = 0; i < compassCount; i++)
-            linesPoints.append(MPoint(listLinesCompass[i][0],
-                                      listLinesCompass[i][1],
-                                      listLinesCompass[i][2]) *
-                               matPreRotate);
+        for (int i = 0; i < compassCount; i++) {
+            MPoint pt = MPoint(listLinesCompass[i][0], listLinesCompass[i][1],
+                               listLinesCompass[i][2]) *
+                        matPreRotate;
+            linesPoints.append(pt);
+        }
     }
 
     else if (displayIndex == 4) {  // cross
-        for (int i = 0; i < crossCount; i++)
-            linesPoints.append(MPoint(listLinesCross[i][0],
-                                      listLinesCross[i][1],
-                                      listLinesCross[i][2]) *
-                               matPreRotate);
+        for (int i = 0; i < crossCount; i++) {
+            MPoint pt = MPoint(listLinesCross[i][0], listLinesCross[i][1],
+                               listLinesCross[i][2]) *
+                        matPreRotate;
+            linesPoints.append(pt);
+        }
     }
 
     else if (displayIndex == 5) {  // crossArrow
-        for (int i = 0; i < crossArrowCount; i++)
-            linesPoints.append(MPoint(listLinesCrossarrow[i][0],
-                                      listLinesCrossarrow[i][1],
-                                      listLinesCrossarrow[i][2]) *
-                               matPreRotate);
+        for (int i = 0; i < crossArrowCount; i++) {
+            MPoint pt =
+                MPoint(listLinesCrossarrow[i][0], listLinesCrossarrow[i][1],
+                       listLinesCrossarrow[i][2]) *
+                matPreRotate;
+            linesPoints.append(pt);
+        }
     }
 
     else if (displayIndex == 6) {  // cube
-        for (int i = 0; i < cubeCount; i++)
-            linesPoints.append(MPoint(listLinesCube[i][0], listLinesCube[i][1],
-                                      listLinesCube[i][2]) *
-                               matPreRotate);
+        for (int i = 0; i < cubeCount; i++) {
+            MPoint pt = MPoint(listLinesCube[i][0], listLinesCube[i][1],
+                               listLinesCube[i][2]) *
+                        matPreRotate;
+            linesPoints.append(pt);
+        }
     }
 
     else if (displayIndex == 7) {  // cubeWithPeak
-        for (int i = 0; i < cubeWithPeakCount; i++)
-            linesPoints.append(MPoint(listLinesCubewithpeak[i][0],
-                                      listLinesCubewithpeak[i][1],
-                                      listLinesCubewithpeak[i][2]) *
-                               matPreRotate);
+        for (int i = 0; i < cubeWithPeakCount; i++) {
+            MPoint pt =
+                MPoint(listLinesCubewithpeak[i][0], listLinesCubewithpeak[i][1],
+                       listLinesCubewithpeak[i][2]) *
+                matPreRotate;
+            linesPoints.append(pt);
+        }
     }
 
     else if (displayIndex == 8) {  // cylinder
-        for (int i = 0; i < cylinderCount; i++)
-            linesPoints.append(MPoint(listLinesCylinder[i][0],
-                                      listLinesCylinder[i][1],
-                                      listLinesCylinder[i][2]) *
-                               matPreRotate);
+        for (int i = 0; i < cylinderCount; i++) {
+            MPoint pt = MPoint(listLinesCylinder[i][0], listLinesCylinder[i][1],
+                               listLinesCylinder[i][2]) *
+                        matPreRotate;
+            linesPoints.append(pt);
+        }
     }
 
     else if (displayIndex == 9) {  // diamond
-        for (int i = 0; i < diamondCount; i++)
-            linesPoints.append(MPoint(listLinesDiamond[i][0],
-                                      listLinesDiamond[i][1],
-                                      listLinesDiamond[i][2]) *
-                               matPreRotate);
+        for (int i = 0; i < diamondCount; i++) {
+            MPoint pt = MPoint(listLinesDiamond[i][0], listLinesDiamond[i][1],
+                               listLinesDiamond[i][2]) *
+                        matPreRotate;
+            linesPoints.append(pt);
+        }
     }
 
     else if (displayIndex == 10) {  // flower
-        for (int i = 0; i < flowerCount; i++)
-            linesPoints.append(MPoint(listLinesFlower[i][0],
-                                      listLinesFlower[i][1],
-                                      listLinesFlower[i][2]) *
-                               matPreRotate);
+        for (int i = 0; i < flowerCount; i++) {
+            MPoint pt = MPoint(listLinesFlower[i][0], listLinesFlower[i][1],
+                               listLinesFlower[i][2]) *
+                        matPreRotate;
+            linesPoints.append(pt);
+        }
     }
 
     else if (displayIndex == 11) {  // jaw
-        for (int i = 0; i < jawCount; i++)
-            linesPoints.append(MPoint(listLinesJaw[i][0], listLinesJaw[i][1],
-                                      listLinesJaw[i][2]) *
-                               matPreRotate);
+        for (int i = 0; i < jawCount; i++) {
+            MPoint pt = MPoint(listLinesJaw[i][0], listLinesJaw[i][1],
+                               listLinesJaw[i][2]) *
+                        matPreRotate;
+            linesPoints.append(pt);
+        }
     }
 
     else if (displayIndex == 12) {  // null
-        for (int i = 0; i < nullCount; i++)
-            linesPoints.append(MPoint(listLinesNull[i][0], listLinesNull[i][1],
-                                      listLinesNull[i][2]) *
-                               matPreRotate);
+        for (int i = 0; i < nullCount; i++) {
+            MPoint pt = MPoint(listLinesNull[i][0], listLinesNull[i][1],
+                               listLinesNull[i][2]) *
+                        matPreRotate;
+            linesPoints.append(pt);
+        }
     }
 
     else if (displayIndex == 13) {  // pyramid
-        for (int i = 0; i < pyramidCount; i++)
-            linesPoints.append(MPoint(listLinesPyramid[i][0],
-                                      listLinesPyramid[i][1],
-                                      listLinesPyramid[i][2]) *
-                               matPreRotate);
+        for (int i = 0; i < pyramidCount; i++) {
+            MPoint pt = MPoint(listLinesPyramid[i][0], listLinesPyramid[i][1],
+                               listLinesPyramid[i][2]) *
+                        matPreRotate;
+            linesPoints.append(pt);
+        }
     }
 
     else if (displayIndex == 14) {  // sphere
-        for (int i = 0; i < sphereCount; i++)
-            linesPoints.append(MPoint(listLinesSphere[i][0],
-                                      listLinesSphere[i][1],
-                                      listLinesSphere[i][2]) *
-                               matPreRotate);
+        for (int i = 0; i < sphereCount; i++) {
+            MPoint pt = MPoint(listLinesSphere[i][0], listLinesSphere[i][1],
+                               listLinesSphere[i][2]) *
+                        matPreRotate;
+            linesPoints.append(pt);
+        }
     }
 
     else if (displayIndex == 15) {  // spine
-        for (int i = 0; i < spineCount; i++)
-            linesPoints.append(MPoint(listLinesSpine[i][0],
-                                      listLinesSpine[i][1],
-                                      listLinesSpine[i][2]) *
-                               matPreRotate);
+        for (int i = 0; i < spineCount; i++) {
+            MPoint pt = MPoint(listLinesSpine[i][0], listLinesSpine[i][1],
+                               listLinesSpine[i][2]) *
+                        matPreRotate;
+            linesPoints.append(pt);
+        }
     }
 
     else if (displayIndex == 16) {  // square
-        for (int i = 0; i < squareCount; i++)
-            linesPoints.append(MPoint(listLinesSquare[i][0],
-                                      listLinesSquare[i][1],
-                                      listLinesSquare[i][2]) *
-                               matPreRotate);
+        for (int i = 0; i < squareCount; i++) {
+            MPoint pt = MPoint(listLinesSquare[i][0], listLinesSquare[i][1],
+                               listLinesSquare[i][2]) *
+                        matPreRotate;
+            linesPoints.append(pt);
+        }
     } else if (displayIndex == 17) {  // lookAt
-        for (int i = 0; i < lookAtCount; i++)
-            linesPoints.append(MPoint(listLinesLookat[i][0],
-                                      listLinesLookat[i][1],
-                                      listLinesLookat[i][2]) *
-                               matPreRotate);
+        for (int i = 0; i < lookAtCount; i++) {
+            MPoint pt = MPoint(listLinesLookat[i][0], listLinesLookat[i][1],
+                               listLinesLookat[i][2]) *
+                        matPreRotate;
+            linesPoints.append(pt);
+        }
     } else if (displayIndex == 18) {  // bended arrow
-        for (int i = 0; i < bendedArrowCount; i++)
-            linesPoints.append(MPoint(listLinesBendedarrow[i][0],
-                                      listLinesBendedarrow[i][1],
-                                      listLinesBendedarrow[i][2]) *
-                               matPreRotate);
+        for (int i = 0; i < bendedArrowCount; i++) {
+            MPoint pt =
+                MPoint(listLinesBendedarrow[i][0], listLinesBendedarrow[i][1],
+                       listLinesBendedarrow[i][2]) *
+                matPreRotate;
+            linesPoints.append(pt);
+        }
     } else if (displayIndex == 19) {  // rotate arrow
-        for (int i = 0; i < rotateArrowCount; i++)
-            linesPoints.append(MPoint(listLinesRotatearrow[i][0],
-                                      listLinesRotatearrow[i][1],
-                                      listLinesRotatearrow[i][2]) *
-                               matPreRotate);
+        for (int i = 0; i < rotateArrowCount; i++) {
+            MPoint pt =
+                MPoint(listLinesRotatearrow[i][0], listLinesRotatearrow[i][1],
+                       listLinesRotatearrow[i][2]) *
+                matPreRotate;
+            linesPoints.append(pt);
+        }
     } else if (displayIndex == 20) {  // gear
-        for (int i = 0; i < gearCount; i++)
-            linesPoints.append(MPoint(listLinesGear[i][0], listLinesGear[i][1],
-                                      listLinesGear[i][2]) *
-                               matPreRotate);
+        for (int i = 0; i < gearCount; i++) {
+            MPoint pt = MPoint(listLinesGear[i][0], listLinesGear[i][1],
+                               listLinesGear[i][2]) *
+                        matPreRotate;
+            linesPoints.append(pt);
+        }
     } else if (displayIndex == 21) {  // lung
-        for (int i = 0; i < lungsCount; i++)
-            linesPoints.append(MPoint(listLinesLungs[i][0],
-                                      listLinesLungs[i][1],
-                                      listLinesLungs[i][2]) *
-                               matPreRotate);
+        for (int i = 0; i < lungsCount; i++) {
+            MPoint pt = MPoint(listLinesLungs[i][0], listLinesLungs[i][1],
+                               listLinesLungs[i][2]) *
+                        matPreRotate;
+            linesPoints.append(pt);
+        }
     }
-
+    // linesPoints
+    updateListOfPoints();
+}
+void harbieLocatorData::updateListOfPoints() {
     // could be better
     this->fullLineList.clear();
     this->fullListIndices.clear();
     int nbLines = this->fLineList.size();
+
     for (int i = 0; i < nbLines; ++i) {
         int nbVertices = this->fLineList[i].length();
         int startPt = this->fullLineList.length();
 
-        for (int j = 0; j < nbVertices; ++j)
-            this->fullLineList.append(this->fLineList[i][j]);
-
+        for (int j = 0; j < nbVertices; ++j) {
+            MPoint pt = this->fLineList[i][j];
+            if (computeCameraAdjustment) pt = this->getPointPositionDisplay(pt);
+            this->fullLineList.append(pt);
+        }
         for (int j = 1; j < nbVertices; ++j) {
             this->fullListIndices.append(startPt + j - 1);
             this->fullListIndices.append(startPt + j);
@@ -332,28 +383,52 @@ void harbieLocatorData::get(const MObject& node, MMatrix matPreRotate) {
     }
 }
 
-void harbieLocatorData::getBB(const MObject& node, MMatrix matPreRotate) {
+MPoint harbieLocatorData::getPointPositionDisplay(MPoint inPoint) {
+    MPoint worldPoint = inPoint * this->worldMatrix;
+    MPoint resPoint = worldPoint * this->current_camera_IMI;
+
+    if (!this->isOrtho) {
+        MVector resVec = MVector(resPoint);
+        double newLength = resVec.length() - this->distanceDisplay;
+        if (newLength < this->nearClipZ) {
+            newLength = 1.1 * this->nearClipZ;
+        }
+        resVec.normalize();
+        resPoint = MPoint(newLength * resVec);
+    } else {
+        /*
+        MPoint matPoint = MPoint(0,0,0) * this->current_camera_IM;
+        MVector vec(worldPoint - matPoint);
+        double dst = vec.length() - this->distanceDisplay;
+        MPoint ToReturn = dst * matPoint + matPoint;
+        return ToReturn * this->worldMatrixInverse;
+        */
+
+        resPoint.z += this->distanceDisplay;
+        if ((resPoint.z * -1) < this->nearClipZ) {
+            resPoint.z = -1.1 * this->nearClipZ;
+        }
+    }
+
+    resPoint = resPoint * this->current_camera_IM;
+    resPoint = resPoint * this->worldMatrixInverse;
+    return resPoint;
+}
+void harbieLocatorData::getFromDagPaths() {
+    if (this->computeCameraAdjustment) {
+        this->current_camera_IM = this->cameraPath.inclusiveMatrix();
+        this->current_camera_IMI = this->cameraPath.inclusiveMatrixInverse();
+
+        MFnCamera real_camera(cameraPath);
+        this->isOrtho = real_camera.isOrtho();
+        this->nearClipZ = real_camera.nearClippingPlane();
+        this->worldMatrix = this->objPath.inclusiveMatrix();
+        this->worldMatrixInverse = this->objPath.inclusiveMatrixInverse();
+    }
+}
+void harbieLocatorData::getBB() {
     MStatus status;
     // MMatrix matPreRotate = node._transformMatrix;
-    MPlug displayType(node, harbieLocator::display);
-    int displayIndex = displayType.asInt();
-    /*
-    if (displayIndex == 0) { // foot
-            this->theBoundingBox = MBoundingBox(MPoint(footBB[0][0],
-    footBB[0][1], footBB[0][2]), MPoint(footBB[1][0], footBB[1][1],
-    footBB[1][2]));
-    }
-    else if (displayIndex == 1) { // cube
-            this->theBoundingBox = MBoundingBox(MPoint(cubeBB[0][0],
-    cubeBB[0][1], cubeBB[0][2]), MPoint(cubeBB[1][0], cubeBB[1][1],
-    cubeBB[1][2]));
-    }
-    else if (displayIndex == 2) { // rings
-            this->theBoundingBox = MBoundingBox(MPoint(sphereBB[0][0],
-    sphereBB[0][1], sphereBB[0][2]), MPoint(sphereBB[1][0], sphereBB[1][1],
-    sphereBB[1][2]));
-    }
-    */
     if (displayIndex == 0) {  // arrow
         this->theBoundingBox =
             MBoundingBox(MPoint(arrowBB[0][0], arrowBB[0][1], arrowBB[0][2]),
@@ -483,15 +558,6 @@ void harbieLocatorData::getBB(const MObject& node, MMatrix matPreRotate) {
     }
     this->theBoundingBox.transformUsing(matPreRotate);
 
-    MPlug centerScalePlug(node, harbieLocator::_centerScale);
-    float centerScale = centerScalePlug.asFloat();
-
-    MPlug showCenterPlug(node, harbieLocator::_showCenter);
-    bool showCenter = showCenterPlug.asBool();
-
-    MPlug showOrientationPlug(node, harbieLocator::_showOrientation);
-    bool showOrientation = showOrientationPlug.asBool();
-
     if (showCenter) {
         MBoundingBox centerBB = MBoundingBox(
             MPoint(0.5 * centerScale, 0.5 * centerScale, 0.5 * centerScale),
@@ -516,10 +582,32 @@ void harbieLocator::draw(M3dView& view, const MDagPath& path,
                          M3dView::DisplayStyle style,
                          M3dView::DisplayStatus status) {
     harbieLocatorData data;
-    data.getPlugs(_self);
-    data.get(_self, data.matPreRotate);
-    _transformMatrix = _transformMatrix;
-    // data.get(_self, _transformMatrix);
+    data.checkUpdateAttr(_self);
+    if (data.updateAttrs) {
+        data.getPlugs(_self);
+        data.getBB();
+        // to draw in front
+        if (data.computeCameraAdjustment) {
+            MDagPath cameraPath;
+            view.getCamera(cameraPath);
+            data.cameraPath = cameraPath;
+            data.objPath = path;
+            data.getFromDagPaths();
+        }
+        data.getListOfPoints(_self);
+
+        MPlug updateAttrsPlug(_self, _updateAttrs);
+        updateAttrsPlug.setBool(false);
+        data.updateAttrs = false;
+
+    } else if (data.computeCameraAdjustment) {
+        MDagPath cameraPath;
+        view.getCamera(cameraPath);
+        data.cameraPath = cameraPath;
+        data.objPath = path;
+        data.getFromDagPaths();
+        data.updateListOfPoints();
+    }
 
     view.beginGL();
     if ((style == M3dView::kFlatShaded) || (style == M3dView::kGouraudShaded)) {
@@ -581,12 +669,12 @@ bool harbieLocator::isBounded() const { return true; }
 
 MBoundingBox harbieLocator::boundingBox() const {
     // Get the size
-    //
-    MObject thisNode = thisMObject();
     harbieLocatorData data;
-
-    data.getPlugs(_self);
-    data.getBB(_self, data.matPreRotate);
+    data.checkUpdateAttr(_self);
+    if (data.updateAttrs) {
+        data.getPlugs(_self);
+        data.getBB();
+    }
     // data.get(thisMObject(), _transformMatrix);
     return data.theBoundingBox;
 }
@@ -652,8 +740,11 @@ MBoundingBox harbieLocatorDrawOverride::boundingBox(
     const MDagPath& objPath, const MDagPath& cameraPath) const {
     harbieLocatorData data;
     MObject node = objPath.node();
-    data.getPlugs(node);
-    data.getBB(node, data.matPreRotate);
+    data.checkUpdateAttr(node);
+    if (data.updateAttrs) {
+        data.getPlugs(node);
+        data.getBB();
+    }
     return data.theBoundingBox;
     // return MBoundingBox (MPoint(-.5, -.5, -.5), MPoint(.5, .5, .5));
 }
@@ -676,8 +767,31 @@ MUserData* harbieLocatorDrawOverride::prepareForDraw(
     if (!data) {
         data = new harbieLocatorData;
     }
-    data->getPlugs(node);
-    data->get(node, data->matPreRotate);
+    data->checkUpdateAttr(node);
+
+    if (data->updateAttrs) {
+        data->getPlugs(node);
+        data->getBB();
+        if (data->computeCameraAdjustment) {
+            data->cameraPath = cameraPath;
+            data->objPath = objPath;
+            data->getFromDagPaths();
+        }
+        data->getListOfPoints(node);
+
+        MPlug updateAttrsPlug(node, harbieLocator::_updateAttrs);
+        updateAttrsPlug.setBool(false);
+        data->updateAttrs = false;
+
+    } else if (data->computeCameraAdjustment) {
+        data->cameraPath = cameraPath;
+        data->objPath = objPath;
+        data->getFromDagPaths();
+        data->updateListOfPoints();
+    }
+    if (data->computeCameraAdjustment) {
+        MHWRender::MRenderer::setGeometryDrawDirty(node);
+    }
 
     // get correct color based on the state of object, e.g. active or dormant
     data->fColor = MHWRender::MGeometryUtilities::wireframeColor(objPath);
@@ -697,9 +811,13 @@ void harbieLocatorDrawOverride::addUIDrawables(
     if (!pLocatorData) {
         return;
     }
-    drawManager.beginDrawable();
+    /*
+    if (pLocatorData->computeCameraAdjustment) {
+            MHWRender::MRenderer::setGeometryDrawDirty(objPath.node());
+    }
+    */
 
-    // Draw the foot print solid/wireframe
+    drawManager.beginDrawable();
     drawManager.setColor(pLocatorData->fColor);
     drawManager.setDepthPriority(5);
 
@@ -711,42 +829,9 @@ void harbieLocatorDrawOverride::addUIDrawables(
                              pLocatorData->fTriangleList[i]);
         }
     }
-
-    /*
-    MPointArray linesPoints;
-    MUintArray listIndices;
-
-    int nbLines = pLocatorData->fLineList.size();
-    for (int i = 0; i < nbLines; ++i) {
-            int nbVertices = pLocatorData->fLineList[i].length();
-            int startPt = linesPoints.length();
-
-            for (int j = 0; j < nbVertices; ++j)
-                    linesPoints.append(pLocatorData->fLineList[i][j]);
-
-            for (int j = 1; j < nbVertices; ++j) {
-                    listIndices.append(startPt + j - 1);
-                    listIndices.append(startPt + j);
-            }
-    }
-    drawManager.mesh(MHWRender::MUIDrawManager::kLines, linesPoints, NULL, NULL,
-    &listIndices, NULL);
-    */
     drawManager.mesh(MHWRender::MUIDrawManager::kLines,
                      pLocatorData->fullLineList, NULL, NULL,
                      &pLocatorData->fullListIndices, NULL);
-    /*
-
-    // Draw a text "harbieLocator"
-    MPoint pos( 0.0, 0.0, 0.0 ); // Position of the text
-    MColor textColor( 0.1f, 0.8f, 0.8f, 1.0f ); // Text color
-
-    drawManager.setColor( textColor );
-    drawManager.setFontSize(12.2);// MHWRender::MUIDrawManager::kSmallFontSize
-    ); drawManager.text( pos,  MString("harbieLocator"),
-    MHWRender::MUIDrawManager::kCenter );
-    */
-
     drawManager.endDrawable();
 }
 
@@ -848,6 +933,21 @@ MStatus harbieLocator::initialize() {
     nAttr.setWritable(true);
     nAttr.setReadable(true);
     CHECK_MSTATUS(addAttribute(_centerScale));
+
+    _distanceDisplay =
+        nAttr.create("distanceDisplay", "dd", MFnNumericData::kDouble, 0.0);
+    nAttr.setDefault(0.0);
+    nAttr.setMin(0.0);
+    nAttr.setStorable(true);
+    nAttr.setKeyable(true);
+    nAttr.setWritable(true);
+    nAttr.setReadable(true);
+    CHECK_MSTATUS(addAttribute(_distanceDisplay));
+
+    _updateAttrs =
+        nAttr.create("updateAttr", "ua", MFnNumericData::kBoolean, true);
+    nAttr.setStorable(true);
+    CHECK_MSTATUS(addAttribute(_updateAttrs));
 
     return MS::kSuccess;
 }

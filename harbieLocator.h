@@ -38,7 +38,9 @@
 #include <maya/MDataHandle.h>
 #include <maya/MDistance.h>
 #include <maya/MEulerRotation.h>
+#include <maya/MFnCamera.h>
 #include <maya/MFnEnumAttribute.h>
+#include <maya/MFnMatrixData.h>
 #include <maya/MFnNumericAttribute.h>
 #include <maya/MFnUnitAttribute.h>
 #include <maya/MPlug.h>
@@ -47,7 +49,6 @@
 #include <maya/MTransformationMatrix.h>
 #include <maya/MTypeId.h>
 #include <maya/MVector.h>
-
 // Viewport 2.0 includes
 #include <assert.h>
 #include <maya/MDrawContext.h>
@@ -87,8 +88,8 @@ class harbieLocator : public MPxLocatorNode {
     virtual void draw(M3dView& view, const MDagPath& path,
                       M3dView::DisplayStyle style,
                       M3dView::DisplayStatus status);
-    // virtual MStatus         setDependentsDirty(const MPlug& dirty_plug,
-    // MPlugArray& affected_plugs);
+    virtual MStatus setDependentsDirty(const MPlug& dirty_plug,
+                                       MPlugArray& affected_plugs);
 
     virtual bool isBounded() const;
     virtual MBoundingBox boundingBox() const;
@@ -101,10 +102,12 @@ class harbieLocator : public MPxLocatorNode {
     static MObject _showCenter;
     static MObject _showOrientation;
     static MObject _centerScale;
+    static MObject _distanceDisplay;
     static MObject _rotX;
     static MObject _rotY;
     static MObject _rotZ;
     static MObject _rot;
+    static MObject _updateAttrs;
 
    public:
     static MTypeId id;
@@ -113,7 +116,6 @@ class harbieLocator : public MPxLocatorNode {
 
    private:
     MObject _self;
-    bool _update_attrs;
     MMatrix _transformMatrix;
 
     // harbieLocatorData&      data;
@@ -126,13 +128,21 @@ class harbieLocator : public MPxLocatorNode {
 //---------------------------------------------------------------------------
 
 class harbieLocatorData : public MUserData {
+   private:
+    MPoint getPointPositionDisplay(MPoint inPoint);
+
    public:
+    void getFromDagPaths();
     harbieLocatorData() : MUserData(false){};  // don't delete after draw
     virtual ~harbieLocatorData(){};
 
-    virtual void get(const MObject&, MMatrix);
-    virtual void getBB(const MObject&, MMatrix);
+    virtual void getListOfPoints(const MObject&);
+    virtual void checkUpdateAttr(const MObject&);
+    virtual void updateListOfPoints();
+    virtual void getBB();
     virtual void getPlugs(const MObject&);
+
+    bool updateAttrs = true;
 
     MColor fColor;
     std::vector<MPointArray> fLineList;
@@ -140,8 +150,28 @@ class harbieLocatorData : public MUserData {
     MPointArray fullLineList;
     MUintArray fullListIndices;
 
+    // to draw in front of camera
+    double distanceDisplay;
+    bool computeCameraAdjustment;
+    MMatrix projectionMatrix;
+    MMatrix current_camera_IM;
+    MMatrix current_camera_IMI;
+    MMatrix worldMatrix;
+    MMatrix worldMatrixInverse;
+
+    bool isOrtho;
+    double nearClipZ;
+
     MBoundingBox theBoundingBox;
     MMatrix matPreRotate;
+
+    int displayIndex = -1;
+    float centerScale;
+    bool showCenter;
+    bool showOrientation;
+
+    MDagPath objPath;
+    MDagPath cameraPath;
 };
 
 class harbieLocatorDrawOverride : public MHWRender::MPxDrawOverride {
